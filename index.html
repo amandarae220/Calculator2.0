@@ -107,7 +107,12 @@
 
         #resultContainer {
             width: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             text-align: center;
+            gap: 8px;
         }
 
         #resultLabel,
@@ -121,6 +126,9 @@
         #container {
             width: 50%;
             font-size: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         #option {
@@ -138,8 +146,8 @@
         }
 
         #inputs {
-            display: inline;
-            float: left;
+            display: table;
+            border-spacing: 4px 6px;
         }
 
         .chart {
@@ -157,12 +165,11 @@
     <p class="title">Retirement Calculator</p>
     <div id="nonGraphContainer">
         <div id="resultContainer">
-            <div id="resultLabel">$</div>
-            <div id="result"></div>
-            </br>
+            <div style="display:flex;align-items:baseline;">
+                <div id="resultLabel">$</div>
+                <div id="result"></div>
+            </div>
             <p id="resultTitle">Total Savings</p>
-            </br>
-            </br>
             <div id="option">
                 <input name="updateButton" class="button1" type="button" value="Calculate" onclick="clickToUpdate()" />
             </div>
