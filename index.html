@@ -639,6 +639,11 @@
             /* Show floating configure button */
             #mobileConfigBtn { display: flex; }
 
+            /* ── Chart text: 18 SVG units ≈ 12–14px actual across common phones
+               (500-unit viewBox × ~0.69–0.80 device scale), meeting WCAG 1.4.4
+               and Section 508 minimum legibility for data visualization labels ── */
+            .axis, .axisLabel { font-size: 18px; }
+
             /* ── Tooltip ── */
             #tooltip { min-width: 170px; padding: 10px 14px; font-size: 11px; }
             .tt-year { font-size: 14px; margin-bottom: 7px; padding-bottom: 6px; }
@@ -791,7 +796,7 @@
 
     function updateChartDims() {
         if (isMobile()) {
-            margin = { top: 20, right: 16, bottom: 10, left: 42 };
+            margin = { top: 20, right: 16, bottom: 10, left: 64 };
             width  = 500;
             height = 360;
         } else {
@@ -1207,9 +1212,13 @@
         svg.append("g").call(yAxis).attr("class", "y-axis axis");
 
         // Bar category legend
-        var revKeys = ['Interest', 'Work Contributions', 'Self Contributions'];
+        // On mobile the 500-unit viewBox renders at ~0.75× — use a larger SVG font-size
+        // to hit legible actual pixel sizes, and shorten labels so they don't overflow.
+        var lgFs     = isMobile() ? 18 : 10;
+        var lgShort  = { 'Interest': 'Interest', 'Work Contributions': 'Work', 'Self Contributions': 'Self' };
+        var revKeys  = ['Interest', 'Work Contributions', 'Self Contributions'];
         var lgG = svg.append("g").attr("class", "chart-legend")
-            .attr("font-family", "sans-serif").attr("font-size", 10).attr("text-anchor", "end")
+            .attr("font-family", "sans-serif").attr("font-size", lgFs)
             .selectAll("g").data(revKeys).join("g")
             .attr("transform", function(d, i) {
                 return "translate(" + (margin.left + i * ((width - margin.left - margin.right) / 3.2)) + ",0)";
@@ -1217,14 +1226,14 @@
 
         lgG.append("rect").attr("x", 0).attr("width", 13).attr("height", 13)
             .attr("fill", function(d) { return BAR_COLORS[d]; });
-        lgG.append("text").attr("x", -5).attr("y", 10).attr("dy", "0.1em")
-            .attr("text-anchor", "end")
-            .text(function(d) { return d; });
+        lgG.append("text").attr("x", 17).attr("y", 10).attr("dy", "0.1em")
+            .attr("text-anchor", "start")
+            .text(function(d) { return isMobile() ? lgShort[d] : d; });
 
         // Saved scenario line legend
         if (savedScenarios.length) {
             var scLeg = svg.append("g").attr("class", "chart-legend")
-                .attr("font-family", "sans-serif").attr("font-size", 10)
+                .attr("font-family", "sans-serif").attr("font-size", lgFs)
                 .attr("transform", "translate(" + margin.left + ",18)");
 
             savedScenarios.forEach(function(sc, i) {
