@@ -1,0 +1,37 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [feature/angular-makeover, main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout v2 (feature/angular-makeover)
+        uses: actions/checkout@v4
+        with:
+          ref: feature/angular-makeover
+          path: v2
+
+      - name: Checkout v1 (main)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: v1
+
+      - name: Assemble deploy tree
+        run: |
+          mkdir -p dist/v1
+          cp v2/index.html dist/index.html
+          cp v1/index.html dist/v1/index.html
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
