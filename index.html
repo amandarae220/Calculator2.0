@@ -629,6 +629,7 @@
                 flex: none;
                 min-height: 52vw;
                 align-items: stretch;
+                margin-top: 16px;
             }
 
             /* Saved scenarios: single column on mobile */
@@ -1249,8 +1250,9 @@
             });
         }
 
+        var yLabelY = isMobile() ? (height - margin.bottom + 52) : (height + margin.top + 2);
         svg.append("text")
-            .attr("transform", "translate(" + (width / 2) + "," + (height + margin.top + 2) + ")")
+            .attr("transform", "translate(" + (width / 2) + "," + yLabelY + ")")
             .style("text-anchor", "middle").attr("class", "axisLabel").text("Years");
     }
 
