@@ -271,6 +271,108 @@
             overflow: visible;
         }
 
+        /* ── Key Insights ── */
+        #insightsSection {
+            padding-top: 24px;
+            margin-top: 4px;
+        }
+
+        .insightsSectionTitle {
+            font-family: 'Oswald', sans-serif;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 14px;
+        }
+
+        #insightCards {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+            scrollbar-width: none;
+        }
+
+        #insightCards::-webkit-scrollbar { display: none; }
+
+        .insightCard {
+            flex: 0 0 auto;
+            width: 156px;
+            background: #f4f2ff;
+            border-radius: 12px;
+            border-left: 3px solid #7657f4;
+            padding: 14px 14px 14px 13px;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.45s ease, transform 0.45s ease;
+        }
+
+        .insightCard.ic-income {
+            background: #f0f8ff;
+            border-left-color: #1680d4;
+        }
+
+        .insightCard.ic-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .ic-tag {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #7657f4;
+            margin-bottom: 8px;
+        }
+
+        .ic-num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #7657f4;
+            color: #fff;
+            font-size: 8px;
+            font-weight: 700;
+            letter-spacing: 0;
+        }
+
+        .ic-income .ic-tag { color: #1680d4; }
+
+        .ic-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #1a1a2e;
+            line-height: 1.2;
+            margin-bottom: 5px;
+        }
+
+        .ic-value {
+            font-size: 19px;
+            font-weight: 800;
+            color: #1a1a2e;
+            line-height: 1.1;
+            margin-bottom: 7px;
+        }
+
+        .ic-unit {
+            font-size: 12px;
+            font-weight: 500;
+            color: #888;
+        }
+
+        .ic-label {
+            font-size: 10px;
+            color: #555;
+            line-height: 1.4;
+        }
+
         /* ── Saved scenarios ── */
         #savedSection {
             display: none;
@@ -711,6 +813,11 @@
                 <input id="e" type="number" value="7000" autocomplete="off">
                 <div class="inputError" id="e-error"></div>
             </div>
+            <div class="inputGroup full">
+                <label for="s">Yearly Spend</label>
+                <input id="s" type="number" autocomplete="off" placeholder="For Coast FI">
+                <div class="inputError" id="s-error"></div>
+            </div>
         </div>
 
         <hr class="panelDivider">
@@ -726,6 +833,11 @@
     <div id="rightPanel">
         <div id="chartWrapper">
             <div id="chart"></div>
+        </div>
+
+        <div id="insightsSection">
+            <div class="insightsSectionTitle">Key Insights</div>
+            <div id="insightCards" role="list"></div>
         </div>
 
         <div id="savedSection">
@@ -887,7 +999,8 @@
             r: +document.getElementById("r").value,
             t: +document.getElementById("t").value,
             c: +document.getElementById("c").value,
-            e: +document.getElementById("e").value
+            e: +document.getElementById("e").value,
+            s: +document.getElementById("s").value
         };
     }
 
@@ -1013,7 +1126,9 @@
         c: { required: false, integer: true,  min: 0, max: 100000,
              msgs: { range: 'Between $0 and $100,000', integer: 'Whole numbers only' } },
         e: { required: false, integer: true,  min: 0, max: 100000,
-             msgs: { range: 'Between $0 and $100,000', integer: 'Whole numbers only' } }
+             msgs: { range: 'Between $0 and $100,000', integer: 'Whole numbers only' } },
+        s: { required: false, integer: true,  min: 0, max: 500000,
+             msgs: { range: 'Between $0 and $500,000', integer: 'Whole numbers only' } }
     };
 
     function fieldError(id) {
@@ -1046,7 +1161,7 @@
             saveBtn.textContent = 'Max 4';
             return;
         }
-        var allValid = ['p', 'r', 't', 'c', 'e'].every(function(id) {
+        var allValid = ['p', 'r', 't', 'c', 'e', 's'].every(function(id) {
             return fieldError(id) === '';
         });
         saveBtn.disabled    = !allValid;
@@ -1054,6 +1169,200 @@
     }
 
     // ── Chart ────────────────────────────────────────────
+    // ── Key Insights ─────────────────────────────────────
+    function computeInsights(inp, arr) {
+        var insights = [];
+        var r          = inp.r / 100;
+        var selfContrib = inp.c || 0;
+        var fmt = d3.format(',.0f');
+
+        // 1. Year annual interest outpaces self contribution (excluding employer match)
+        if (selfContrib > 0) {
+            for (var j = 1; j <= inp.t; j++) {
+                var annInt = arr[j].Interest - arr[j - 1].Interest;
+                if (annInt >= selfContrib) {
+                    insights.push({
+                        type:  'milestone',
+                        year:  j,
+                        title: 'Lift Off',
+                        tag:   'Year ' + j,
+                        value: '$' + fmt(annInt) + '<span class="ic-unit">/yr</span>',
+                        label: 'Annual interest outpaces your self contribution'
+                    });
+                    break;
+                }
+            }
+        }
+
+        // 2. Year cumulative interest overtakes total contributions
+        for (var i = 1; i <= inp.t; i++) {
+            var totContrib = arr[i]['Self Contributions'] + arr[i]['Work Contributions'];
+            if (arr[i].Interest >= totContrib) {
+                insights.push({
+                    type:  'milestone',
+                    year:  i,
+                    title: 'Tipping Point',
+                    tag:   'Year ' + i,
+                    value: '$' + fmt(arr[i].amount),
+                    label: 'Interest overtakes total contributions'
+                });
+                break;
+            }
+        }
+
+        // 3. Coast FI — always shown; unlocks when yearly spend is provided
+        var yearlySpend = inp.s || 0;
+        if (yearlySpend > 0 && r > 0) {
+            var fiTarget  = yearlySpend * 25;
+            var coastYear = null;
+            for (var k = 1; k <= inp.t; k++) {
+                var coastNeeded = fiTarget / Math.pow(1 + r, inp.t - k);
+                if (arr[k].amount >= coastNeeded) { coastYear = k; break; }
+            }
+            if (coastYear !== null) {
+                insights.push({
+                    type:  'milestone',
+                    year:  coastYear,
+                    title: 'Coast FI',
+                    tag:   'Year ' + coastYear,
+                    value: '$' + fmt(fiTarget),
+                    label: 'FI target — stop contributing now and coast to full FI by year ' + inp.t
+                });
+            } else {
+                insights.push({
+                    type:  'milestone',
+                    title: 'Coast FI',
+                    tag:   'Not within timeline',
+                    value: '$' + fmt(fiTarget),
+                    label: 'FI target — extend your timeline or increase contributions'
+                });
+            }
+        } else {
+            insights.push({
+                type:  'milestone',
+                title: 'Coast FI',
+                tag:   ' ',
+                value: '&mdash;',
+                label: 'Enter your yearly spend above to unlock this insight'
+            });
+        }
+
+        // 4. Sustainable income at retirement (interest only — principal preserved)
+        if (r > 0) {
+            var sustIncome = arr[inp.t].amount * r;
+            insights.push({
+                type:  'income',
+                title: 'Skim the Top',
+                tag:   'At retirement · Conservative',
+                value: '$' + fmt(sustIncome) + '<span class="ic-unit">/yr</span>',
+                label: 'Withdraw interest only — principal preserved forever'
+            });
+        }
+
+        // 5. 30-year drawdown (spend it all — annuity formula)
+        var finalBal = arr[inp.t].amount;
+        var drawdown = r > 0
+            ? finalBal * r / (1 - Math.pow(1 + r, -30))
+            : finalBal / 30;
+        insights.push({
+            type:  'income',
+            title: 'Die with Zero',
+            tag:   'At retirement · Aggressive',
+            value: '$' + fmt(drawdown) + '<span class="ic-unit">/yr</span>',
+            label: 'Full spend-down over 30 years'
+        });
+
+        return insights;
+    }
+
+    function renderInsights(insights, isInitial) {
+        var container = document.getElementById('insightCards');
+        container.innerHTML = '';
+        var baseDelay = isInitial ? 3100 : 50;
+
+        insights.forEach(function(ins, i) {
+            var card = document.createElement('div');
+            card.className = 'insightCard' + (ins.type === 'income' ? ' ic-income' : '');
+            card.setAttribute('role', 'listitem');
+            var numBadge = ins.year !== undefined
+                ? '<span class="ic-num">' + (i + 1) + '</span>'
+                : '';
+            card.innerHTML =
+                '<div class="ic-tag">' + numBadge + ins.tag + '</div>' +
+                (ins.title ? '<div class="ic-title">' + ins.title + '</div>' : '') +
+                '<div class="ic-value">' + ins.value + '</div>' +
+                '<div class="ic-label">' + ins.label + '</div>';
+            container.appendChild(card);
+            setTimeout(function(c) {
+                return function() { c.classList.add('ic-visible'); };
+            }(card), baseDelay + i * 130);
+        });
+    }
+
+    function drawMilestoneMarkers(svg, x, y, displayTimes, inp, arr, insights, isInitial) {
+        svg.selectAll(".milestone-marker").remove();
+
+        var r     = isMobile() ? 9  : 6;
+        var lineH = isMobile() ? 14 : 11;
+        var fs    = isMobile() ? 11 : 7;
+        var color = '#7657f4';
+
+        // Build a map of displayTime → [{ins, num}] for milestone insights only
+        var byDt = {};
+        insights.forEach(function(ins, idx) {
+            if (ins.year === undefined) return;
+            // Find the first displayTime >= milestone year within the bar range
+            var dt = null;
+            for (var k = 0; k < displayTimes.length; k++) {
+                if (displayTimes[k] >= ins.year && displayTimes[k] <= inp.t) {
+                    dt = displayTimes[k];
+                    break;
+                }
+            }
+            if (dt === null || x(dt) === undefined) return;
+            if (!byDt[dt]) byDt[dt] = [];
+            byDt[dt].push({ ins: ins, num: idx + 1 });
+        });
+
+        Object.keys(byDt).forEach(function(dt) {
+            dt = +dt;
+            var group  = byDt[dt];
+            var barTop = y(arr[dt].amount);
+            var baseCx = x(dt) + x.bandwidth() / 2;
+
+            group.forEach(function(m, gi) {
+                var cx = group.length === 1 ? baseCx
+                    : baseCx + (gi === 0 ? -(r + 3) : (r + 3));
+                var cy = barTop - lineH - r;
+                var g  = svg.append("g").attr("class", "milestone-marker").attr("opacity", 0);
+
+                g.append("line")
+                    .attr("x1", cx).attr("x2", cx)
+                    .attr("y1", barTop - 2).attr("y2", cy + r)
+                    .attr("stroke", color).attr("stroke-width", 1.5)
+                    .attr("stroke-dasharray", "2,2");
+
+                g.append("circle")
+                    .attr("cx", cx).attr("cy", cy)
+                    .attr("r", r).attr("fill", color);
+
+                g.append("text")
+                    .attr("x", cx).attr("y", cy)
+                    .attr("text-anchor", "middle")
+                    .attr("dominant-baseline", "central")
+                    .attr("font-family", "sans-serif")
+                    .attr("font-size", fs)
+                    .attr("font-weight", "700")
+                    .attr("fill", "#fff")
+                    .text(m.num);
+            });
+        });
+
+        svg.selectAll(".milestone-marker")
+            .transition().delay(isInitial ? 2900 : 0).duration(400)
+            .attr("opacity", 1);
+    }
+
     function lineChartCreate() {
         updateChartDims();
         d3.select(sectionID).append("svg")
@@ -1254,6 +1563,10 @@
         svg.append("text")
             .attr("transform", "translate(" + (width / 2) + "," + yLabelY + ")")
             .style("text-anchor", "middle").attr("class", "axisLabel").text("Years");
+
+        var chartInsights = computeInsights(inp, totalArray);
+        drawMilestoneMarkers(svg, x, y, displayTimes, inp, totalArray, chartInsights, isInitial);
+        renderInsights(chartInsights, isInitial);
     }
 
     // ── Init ──────────────────────────────────────────────
@@ -1268,7 +1581,7 @@
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(function() { lineChartUpdate(false); }, 400);
     }
-    ['p','r','t','c','e'].forEach(function(id) {
+    ['p','r','t','c','e','s'].forEach(function(id) {
         document.getElementById(id).addEventListener('input', function() {
             scheduleUpdate();
             // Clear error as soon as the field becomes valid (don't add new errors while typing)
@@ -1285,7 +1598,7 @@
     document.getElementById("saveBtn").addEventListener("click", function() {
         if (savedScenarios.length >= MAX_SAVED) return;
         // Validate all fields and surface any errors before saving
-        var inputsValid = ['p', 'r', 't', 'c', 'e'].reduce(function(ok, id) {
+        var inputsValid = ['p', 'r', 't', 'c', 'e', 's'].reduce(function(ok, id) {
             return showFieldError(id) && ok;
         }, true);
         if (!inputsValid) { updateSaveBtn(); return; }
