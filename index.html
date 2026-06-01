@@ -8,6 +8,14 @@
     <script src="https://d3js.org/d3.v5.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --brand-primary: #5a38e0;
+            --brand-light:   #8b6ff5;
+            --brand-dark:    #3a1fa0;
+            --brand-accent:  #7657f4;
+            --brand-income:  #1680d4;
+        }
+
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         .sr-only {
@@ -37,7 +45,7 @@
             width: 420px;
             min-width: 320px;
             flex-shrink: 0;
-            background: linear-gradient(160deg, #8b6ff5 0%, #5a38e0 55%, #3a1fa0 100%);
+            background: linear-gradient(160deg, var(--brand-light) 0%, var(--brand-primary) 55%, var(--brand-dark) 100%);
             color: #fff;
             padding: clamp(16px, 3.5vh, 36px) 32px;
             display: flex;
@@ -187,9 +195,10 @@
         }
 
         /* ── Input error state (purple panel) ── */
-        .inputGroup input.invalid {
-            border-color: rgba(255, 110, 110, 0.9) !important;
-            background: rgba(255, 80, 80, 0.15) !important;
+        .inputGroup input.invalid,
+        .inputGroup input.invalid:focus {
+            border-color: rgba(255, 110, 110, 0.9);
+            background: rgba(255, 80, 80, 0.15);
         }
 
         .inputError {
@@ -201,9 +210,10 @@
 
         /* ── Error state overrides inside the white mobile sheet ── */
         #mobileSheetContent .reqMark { color: #bbb; }
-        #mobileSheetContent .inputGroup input.invalid {
-            border-color: #e53935 !important;
-            background: rgba(229, 57, 53, 0.06) !important;
+        #mobileSheetContent .inputGroup input.invalid,
+        #mobileSheetContent .inputGroup input.invalid:focus {
+            border-color: #e53935;
+            background: rgba(229, 57, 53, 0.06);
         }
         #mobileSheetContent .inputError { color: #e53935; }
 
@@ -237,7 +247,7 @@
             border: none;
             border-radius: 6px;
             background: #fff;
-            color: #5a38e0;
+            color: var(--brand-primary);
             cursor: pointer;
             white-space: nowrap;
             transition: opacity 0.15s;
@@ -309,7 +319,7 @@
             flex-direction: column;
             background: #f4f2ff;
             border-radius: 12px;
-            border-left: 3px solid #7657f4;
+            border-left: 3px solid var(--brand-accent);
             padding: 14px 14px 14px 13px;
             opacity: 0;
             transform: translateY(10px);
@@ -318,11 +328,11 @@
 
         .insightCard.ic-income {
             background: #f0f8ff;
-            border-left-color: #1680d4;
+            border-left-color: var(--brand-income);
         }
 
         .insightCard:focus-visible {
-            outline: 2px solid #7657f4;
+            outline: 2px solid var(--brand-accent);
             outline-offset: 2px;
         }
 
@@ -339,7 +349,7 @@
             font-weight: 700;
             letter-spacing: 0.08em;
             text-transform: uppercase;
-            color: #7657f4;
+            color: var(--brand-accent);
             margin-bottom: 8px;
         }
 
@@ -351,14 +361,14 @@
             width: 14px;
             height: 14px;
             border-radius: 50%;
-            background: #7657f4;
+            background: var(--brand-accent);
             color: #fff;
             font-size: 8px;
             font-weight: 700;
             letter-spacing: 0;
         }
 
-        .ic-income .ic-tag { color: #1680d4; }
+        .ic-income .ic-tag { color: var(--brand-income); }
 
         .ic-title {
             font-size: 13px;
@@ -579,7 +589,7 @@
             width: 52px;
             height: 52px;
             border-radius: 50%;
-            background: #5a38e0;
+            background: var(--brand-primary);
             color: #fff;
             border: none;
             cursor: pointer;
@@ -658,7 +668,7 @@
         }
 
         #sheetDoneBtn {
-            background: #5a38e0;
+            background: var(--brand-primary);
             color: #fff;
             border: none;
             border-radius: 20px;
@@ -691,7 +701,7 @@
 
         #mobileSheetContent .inputGroup input:focus {
             background: #fff;
-            border-color: #5a38e0;
+            border-color: var(--brand-primary);
             outline: none;
         }
 
@@ -708,12 +718,12 @@
 
         #mobileSheetContent #scenarioName:focus {
             background: #fff;
-            border-color: #5a38e0;
+            border-color: var(--brand-primary);
             outline: none;
         }
 
         #mobileSheetContent #saveBtn {
-            background: #5a38e0;
+            background: var(--brand-primary);
             color: #fff;
         }
 
@@ -721,8 +731,6 @@
            MOBILE  (≤ 720px)
         ══════════════════════════════════════════ */
         @media (max-width: 720px) {
-            body { height: 100vh; overflow: hidden; }
-
             #app { flex-direction: column; height: 100vh; }
 
             /* ── Left panel: compact metric strip ── */
@@ -928,6 +936,15 @@
     var BAR_COLORS = { 'Self Contributions': '#7657f4', 'Work Contributions': '#BFB5FF', 'Interest': '#68d0fa' };
     var SC_COLORS  = ['#e8774a', '#2baa6a', '#1680d4', '#c94fa0'];
     var MAX_SAVED  = 4;
+
+    // Chart layout constants
+    var Y_MAX_PAD    = 1.05;  // headroom above the tallest bar
+    var LG_COL_DIV   = 3.2;   // divides chart width into legend columns (>3 adds breathing room)
+    var SC_LEG_STEP  = 140;   // horizontal gap between saved-scenario legend entries
+    var SC_LEG_Y     = 18;    // y-offset of saved-scenario legend row below the bar legend
+
+    // Cached once so all callers share the same MediaQueryList instance
+    var PREFERS_REDUCED_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)");
 
     var sectionID = "#chart";
     var PADDING   = 0.15;
@@ -1343,8 +1360,7 @@
     function renderInsights(insights, isInitial) {
         var container = document.getElementById('insightCards');
         container.innerHTML = '';
-        var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        var baseDelay = reducedMotion ? 0 : (isInitial ? 3100 : 50);
+        var baseDelay = PREFERS_REDUCED_MOTION.matches ? 0 : (isInitial ? 3100 : 50);
         var inp = readInputs();
 
         insights.forEach(function(ins, i) {
@@ -1465,8 +1481,9 @@
             });
         });
 
+        var rm = PREFERS_REDUCED_MOTION.matches;
         svg.selectAll(".milestone-marker")
-            .transition().delay(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : (isInitial ? 2900 : 0)).duration(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 400)
+            .transition().delay(rm ? 0 : (isInitial ? 2900 : 0)).duration(rm ? 0 : 400)
             .attr("opacity", 1);
     }
 
@@ -1521,7 +1538,7 @@
             .padding(PADDING);
 
         var y = d3.scaleLinear()
-            .domain([0, yMax * 1.05])
+            .domain([0, yMax * Y_MAX_PAD])
             .rangeRound([height - margin.bottom, margin.top]);
 
         var colorFn = d3.scaleOrdinal().domain(KEYS)
@@ -1540,8 +1557,7 @@
 
         var svg = d3.select(sectionID).select("svg");
 
-        var prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        var ANIM_MS = prefersReducedMotion ? 0 : 3000;
+        var ANIM_MS = PREFERS_REDUCED_MOTION.matches ? 0 : 3000;
 
         if (isInitial) {
             // Draw bars at their final positions immediately
@@ -1587,17 +1603,19 @@
                 });
 
         } else {
-            svg.selectAll(".bar-cover").remove();
-            svg.selectAll("g.bar-group").remove();
+            // Interrupt any in-progress bar-reveal animation before rebuilding
+            svg.selectAll(".bar-cover").interrupt().remove();
+            svg.selectAll("g.bar-group rect").interrupt();
+
             var gs = svg.selectAll("g.bar-group").data(series)
-                .enter().append("g").attr("class", "bar-group")
+                .join(function(enter) { return enter.append("g").attr("class", "bar-group"); })
                 .attr("fill", function(d) { return colorFn(d.key); });
 
             var rects = gs.selectAll("rect").data(function(d) { return d; })
-                .enter().append("rect")
-                .attr("x", function(d) { return x(d.data.time); })
-                .attr("width", x.bandwidth())
-                .attr("y", function(d) { return y(d[1]); })
+                .join("rect")
+                .attr("x",      function(d) { return x(d.data.time); })
+                .attr("width",  x.bandwidth())
+                .attr("y",      function(d) { return y(d[1]); })
                 .attr("height", function(d) { return y(d[0]) - y(d[1]); });
 
             attachTooltip(rects);
@@ -1641,11 +1659,12 @@
         var lgFs     = isMobile() ? 18 : 10;
         var lgShort  = { 'Interest': 'Interest', 'Work Contributions': 'Work', 'Self Contributions': 'Self' };
         var revKeys  = ['Interest', 'Work Contributions', 'Self Contributions'];
+        var lgColStep = (width - margin.left - margin.right) / LG_COL_DIV;
         var lgG = svg.append("g").attr("class", "chart-legend")
             .attr("font-family", "sans-serif").attr("font-size", lgFs)
             .selectAll("g").data(revKeys).join("g")
             .attr("transform", function(d, i) {
-                return "translate(" + (margin.left + i * ((width - margin.left - margin.right) / 3.2)) + ",0)";
+                return "translate(" + (margin.left + i * lgColStep) + ",0)";
             });
 
         lgG.append("rect").attr("x", 0).attr("width", 13).attr("height", 13)
@@ -1658,10 +1677,10 @@
         if (savedScenarios.length) {
             var scLeg = svg.append("g").attr("class", "chart-legend")
                 .attr("font-family", "sans-serif").attr("font-size", lgFs)
-                .attr("transform", "translate(" + margin.left + ",18)");
+                .attr("transform", "translate(" + margin.left + "," + SC_LEG_Y + ")");
 
             savedScenarios.forEach(function(sc, i) {
-                var gx = i * 140;
+                var gx = i * SC_LEG_STEP;
                 var gg = scLeg.append("g").attr("transform", "translate(" + gx + ",0)");
                 gg.append("line")
                     .attr("x1", 0).attr("y1", 6).attr("x2", 18).attr("y2", 6)
@@ -1693,7 +1712,14 @@
     var debounceTimer;
     function scheduleUpdate() {
         clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(function() { lineChartUpdate(false); }, 400);
+        debounceTimer = setTimeout(function() {
+            // Guard: only update the chart when all required fields are valid,
+            // otherwise computeArray receives NaN and the UI shows "$NaN".
+            var requiredValid = ['p', 'r', 't'].every(function(id) {
+                return fieldError(id) === '';
+            });
+            if (requiredValid) lineChartUpdate(false);
+        }, 400);
     }
     ['p','r','t','c','e','s'].forEach(function(id) {
         document.getElementById(id).addEventListener('input', function() {
