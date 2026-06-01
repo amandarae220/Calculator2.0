@@ -4,6 +4,7 @@
 
 <head>
     <title>Retirement Calculator</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="https://d3js.org/d3.v5.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -171,6 +172,34 @@
 
         .inputGroup input::placeholder { color: rgba(255,255,255,0.3); }
 
+        /* ── Required field marker ── */
+        .reqMark {
+            color: rgba(255,255,255,0.4);
+            font-size: 9px;
+            vertical-align: middle;
+        }
+
+        /* ── Input error state (purple panel) ── */
+        .inputGroup input.invalid {
+            border-color: rgba(255, 110, 110, 0.9) !important;
+            background: rgba(255, 80, 80, 0.15) !important;
+        }
+
+        .inputError {
+            font-size: 10px;
+            color: rgba(255, 140, 140, 1);
+            margin-top: 3px;
+            line-height: 1.3;
+        }
+
+        /* ── Error state overrides inside the white mobile sheet ── */
+        #mobileSheetContent .reqMark { color: #bbb; }
+        #mobileSheetContent .inputGroup input.invalid {
+            border-color: #e53935 !important;
+            background: rgba(229, 57, 53, 0.06) !important;
+        }
+        #mobileSheetContent .inputError { color: #e53935; }
+
         /* ── Save bar ── */
         #saveBar {
             display: flex;
@@ -239,6 +268,7 @@
             width: 100%;
             height: auto;
             display: block;
+            overflow: visible;
         }
 
         /* ── Saved scenarios ── */
@@ -413,12 +443,211 @@
 
         .tt-label { display: flex; align-items: center; }
 
-        /* ── Responsive fallback ── */
+        /* ══════════════════════════════════════════
+           MOBILE BOTTOM SHEET UI
+        ══════════════════════════════════════════ */
+        #mobileConfigBtn {
+            display: none;
+            position: fixed;
+            bottom: 24px;
+            right: 20px;
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: #5a38e0;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 20px rgba(90, 56, 224, 0.5);
+            z-index: 200;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+
+        #mobileConfigBtn:active {
+            transform: scale(0.92);
+            box-shadow: 0 2px 10px rgba(90, 56, 224, 0.4);
+        }
+
+        #mobileOverlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            z-index: 300;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s;
+        }
+
+        #mobileOverlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #mobileSheet {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border-radius: 20px 20px 0 0;
+            z-index: 400;
+            transform: translateY(110%);
+            transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 -4px 32px rgba(0, 0, 0, 0.18);
+            pointer-events: none;
+        }
+
+        #mobileSheet.open {
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .sheetHandle {
+            width: 36px;
+            height: 4px;
+            background: #ddd;
+            border-radius: 2px;
+            margin: 12px auto 0;
+            flex-shrink: 0;
+        }
+
+        .sheetHeader {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 20px 12px;
+            flex-shrink: 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .sheetTitle {
+            font-family: 'Oswald', sans-serif;
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        #sheetDoneBtn {
+            background: #5a38e0;
+            color: #fff;
+            border: none;
+            border-radius: 20px;
+            padding: 7px 18px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: sans-serif;
+        }
+
+        #mobileSheetContent {
+            overflow-y: auto;
+            padding: 20px;
+            flex: 1;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Light-theme overrides for inputs inside the white sheet */
+        #mobileSheetContent .inputGroup label { color: #555; }
+
+        #mobileSheetContent .inputGroup input {
+            background: #f4f4f6;
+            border-color: #e0e0e0;
+            color: #1a1a1a;
+            font-size: 16px;
+            padding: 11px;
+        }
+
+        #mobileSheetContent .inputGroup input::placeholder { color: #bbb; }
+
+        #mobileSheetContent .inputGroup input:focus {
+            background: #fff;
+            border-color: #5a38e0;
+            outline: none;
+        }
+
+        #mobileSheetContent .panelDivider { border-top-color: #ebebeb; }
+
+        #mobileSheetContent #scenarioName {
+            background: #f4f4f6;
+            border-color: #e0e0e0;
+            color: #1a1a1a;
+            font-size: 16px;
+        }
+
+        #mobileSheetContent #scenarioName::placeholder { color: #bbb; }
+
+        #mobileSheetContent #scenarioName:focus {
+            background: #fff;
+            border-color: #5a38e0;
+            outline: none;
+        }
+
+        #mobileSheetContent #saveBtn {
+            background: #5a38e0;
+            color: #fff;
+        }
+
+        /* ══════════════════════════════════════════
+           MOBILE  (≤ 720px)
+        ══════════════════════════════════════════ */
         @media (max-width: 720px) {
-            body { overflow: auto; }
-            #app { flex-direction: column; height: auto; }
-            #leftPanel { width: 100%; min-width: 0; }
-            #rightPanel { padding: 24px 20px; }
+            body { height: 100vh; overflow: hidden; }
+
+            #app { flex-direction: column; height: 100vh; }
+
+            /* ── Left panel: compact metric strip ── */
+            #leftPanel {
+                width: 100%;
+                min-width: 0;
+                flex-shrink: 0;
+                padding: 20px 20px 16px;
+                gap: 12px;
+                overflow: hidden;
+            }
+
+            #leftPanel::before { display: none; }
+
+            #result { font-size: clamp(32px, 10vw, 52px); }
+
+            /* Hide inputs divider; inputs move to sheet */
+            #inputsDivider { display: none; }
+
+            /* ── Right panel: scrollable, chart prominent ── */
+            #rightPanel {
+                flex: 1;
+                min-height: 0;
+                padding: 10px 16px 88px;
+                overflow-y: auto;
+            }
+
+            #chartWrapper {
+                flex: none;
+                min-height: 52vw;
+                align-items: stretch;
+            }
+
+            /* Saved scenarios: single column on mobile */
+            #savedSection { padding-top: 16px; margin-top: 4px; }
+            #savedCards { flex-direction: column; }
+            .savedCard { min-width: 0; flex: none; }
+
+            /* Show floating configure button */
+            #mobileConfigBtn { display: flex; }
+
+            /* ── Tooltip ── */
+            #tooltip { min-width: 170px; padding: 10px 14px; font-size: 11px; }
+            .tt-year { font-size: 14px; margin-bottom: 7px; padding-bottom: 6px; }
+        }
+
+        /* ── Very small screens: single-column inputs in sheet ── */
+        @media (max-width: 400px) {
+            #inputsGrid { grid-template-columns: 1fr; }
+            #inputsGrid .inputGroup.full { grid-column: 1; }
         }
     </style>
 </head>
@@ -447,28 +676,34 @@
             </div>
         </section>
 
-        <hr class="panelDivider">
+        <hr class="panelDivider" id="inputsDivider">
 
+        <div id="inputsSection">
         <div id="inputsGrid">
             <div class="inputGroup">
-                <label for="p">Starting Amount</label>
-                <input id="p" type="number" min="0" value="25000">
+                <label for="p">Starting Amount <span class="reqMark">*</span></label>
+                <input id="p" type="number" value="25000" autocomplete="off">
+                <div class="inputError" id="p-error"></div>
             </div>
             <div class="inputGroup">
-                <label for="r">Rate (%)</label>
-                <input id="r" type="number" min="0" step="0.1" value="8">
+                <label for="r">Rate (%) <span class="reqMark">*</span></label>
+                <input id="r" type="number" step="any" value="8" autocomplete="off">
+                <div class="inputError" id="r-error"></div>
             </div>
             <div class="inputGroup">
-                <label for="t">Years</label>
-                <input id="t" type="number" min="1" max="50" value="20">
+                <label for="t">Years <span class="reqMark">*</span></label>
+                <input id="t" type="number" value="20" autocomplete="off">
+                <div class="inputError" id="t-error"></div>
             </div>
             <div class="inputGroup">
                 <label for="c">Self Contribution (yr)</label>
-                <input id="c" type="number" min="0" value="15000">
+                <input id="c" type="number" value="15000" autocomplete="off">
+                <div class="inputError" id="c-error"></div>
             </div>
             <div class="inputGroup full">
                 <label for="e">Employer Contribution (yr)</label>
-                <input id="e" type="number" min="0" value="7000">
+                <input id="e" type="number" value="7000" autocomplete="off">
+                <div class="inputError" id="e-error"></div>
             </div>
         </div>
 
@@ -478,6 +713,7 @@
             <input id="scenarioName" type="text" maxlength="30" placeholder="Name this scenario…">
             <button id="saveBtn">Save</button>
         </div>
+        </div><!-- /#inputsSection -->
     </div>
 
     <!-- ══ RIGHT PANEL ══ -->
@@ -495,6 +731,27 @@
         </div>
     </div>
 
+</div>
+
+<!-- Mobile floating configure button -->
+<button id="mobileConfigBtn" aria-label="Configure inputs">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+    </svg>
+</button>
+
+<!-- Mobile overlay -->
+<div id="mobileOverlay"></div>
+
+<!-- Mobile bottom sheet -->
+<div id="mobileSheet" role="dialog" aria-modal="true" aria-label="Configure calculator inputs">
+    <div class="sheetHandle"></div>
+    <div class="sheetHeader">
+        <span class="sheetTitle">Configure</span>
+        <button id="sheetDoneBtn">Done</button>
+    </div>
+    <div id="mobileSheetContent"></div>
 </div>
 
 <!-- Tooltip -->
@@ -527,8 +784,62 @@
     var sectionID = "#chart";
     var PADDING   = 0.15;
     var margin    = { top: 30, right: 30, bottom: 10, left: 55 };
-    var width     = 860 - margin.left - margin.right;
-    var height    = 360 - margin.top - margin.bottom;
+    var width     = 860;
+    var height    = 360;
+
+    function isMobile() { return window.innerWidth <= 720; }
+
+    function updateChartDims() {
+        if (isMobile()) {
+            margin = { top: 20, right: 16, bottom: 10, left: 42 };
+            width  = 500;
+            height = 360;
+        } else {
+            margin = { top: 30, right: 30, bottom: 10, left: 55 };
+            width  = 860;
+            height = 360;
+        }
+    }
+
+    function openSheet() {
+        document.getElementById("mobileOverlay").classList.add("visible");
+        document.getElementById("mobileSheet").classList.add("open");
+    }
+
+    function closeSheet() {
+        document.getElementById("mobileOverlay").classList.remove("visible");
+        document.getElementById("mobileSheet").classList.remove("open");
+    }
+
+    function setupMobileInputs() {
+        var section      = document.getElementById("inputsSection");
+        var sheetContent = document.getElementById("mobileSheetContent");
+        var leftPanel    = document.getElementById("leftPanel");
+        if (isMobile()) {
+            if (section.parentNode !== sheetContent) sheetContent.appendChild(section);
+        } else {
+            if (section.parentNode !== leftPanel) {
+                leftPanel.appendChild(section);
+                closeSheet();
+            }
+        }
+    }
+
+    // Returns bar grouping interval based on total years (mobile only)
+    function getMobileGroupSize(maxYears) {
+        if (!isMobile() || maxYears < 10) return 1;
+        if (maxYears < 20) return 3;
+        if (maxYears < 35) return 4;
+        return 5;
+    }
+
+    // Builds evenly-spaced time checkpoints, always including year 0 and maxT
+    function buildDisplayTimes(maxT, step) {
+        var times = [0];
+        for (var i = step; i < maxT; i += step) { times.push(i); }
+        if (times[times.length - 1] !== maxT) times.push(maxT);
+        return times;
+    }
 
     var totalArray     = [];
     var savedScenarios = [];
@@ -593,20 +904,17 @@
     function renderSavedSection() {
         var section   = document.getElementById("savedSection");
         var container = document.getElementById("savedCards");
-        var saveBtn   = document.getElementById("saveBtn");
 
         if (savedScenarios.length === 0) {
             section.style.display = "none";
-            saveBtn.disabled      = false;
-            saveBtn.textContent   = "Save";
+            updateSaveBtn();
             return;
         }
 
         section.style.display = "block";
         document.getElementById("savedCount").textContent =
             savedScenarios.length + " of " + MAX_SAVED;
-        saveBtn.disabled    = savedScenarios.length >= MAX_SAVED;
-        saveBtn.textContent = savedScenarios.length >= MAX_SAVED ? "Max 4" : "Save";
+        updateSaveBtn();
 
         container.innerHTML = "";
         savedScenarios.forEach(function(sc, idx) {
@@ -688,23 +996,92 @@
            .on("mouseout",  function()  { ttEl.style.opacity = "0"; });
     }
 
+    // ── Validation ───────────────────────────────────────
+    var RULES = {
+        p: { required: true,  integer: true,  min: 0, max: 1000000,
+             msgs: { required: 'Required', range: 'Between $0 and $1,000,000', integer: 'Whole numbers only' } },
+        r: { required: true,  integer: false, min: 0, max: 20,
+             msgs: { required: 'Required', range: 'Between 0% and 20%' } },
+        t: { required: true,  integer: true,  min: 1, max: 50,
+             msgs: { required: 'Required', range: 'Between 1 and 50 years', integer: 'Whole numbers only' } },
+        c: { required: false, integer: true,  min: 0, max: 100000,
+             msgs: { range: 'Between $0 and $100,000', integer: 'Whole numbers only' } },
+        e: { required: false, integer: true,  min: 0, max: 100000,
+             msgs: { range: 'Between $0 and $100,000', integer: 'Whole numbers only' } }
+    };
+
+    function fieldError(id) {
+        var rule = RULES[id];
+        var raw  = document.getElementById(id).value.trim();
+        if (raw === '') return rule.required ? rule.msgs.required : '';
+        var num = Number(raw);
+        if (isNaN(num)) return 'Enter a valid number';
+        if (rule.integer && num % 1 !== 0) return rule.msgs.integer;
+        if (num < rule.min || num > rule.max) return rule.msgs.range;
+        return '';
+    }
+
+    function showFieldError(id) {
+        var msg = fieldError(id);
+        document.getElementById(id).classList.toggle('invalid', msg !== '');
+        document.getElementById(id + '-error').textContent = msg;
+        return msg === '';
+    }
+
+    function clearFieldError(id) {
+        document.getElementById(id).classList.remove('invalid');
+        document.getElementById(id + '-error').textContent = '';
+    }
+
+    function updateSaveBtn() {
+        var saveBtn = document.getElementById('saveBtn');
+        if (savedScenarios.length >= MAX_SAVED) {
+            saveBtn.disabled    = true;
+            saveBtn.textContent = 'Max 4';
+            return;
+        }
+        var allValid = ['p', 'r', 't', 'c', 'e'].every(function(id) {
+            return fieldError(id) === '';
+        });
+        saveBtn.disabled    = !allValid;
+        saveBtn.textContent = 'Save';
+    }
+
     // ── Chart ────────────────────────────────────────────
     function lineChartCreate() {
+        updateChartDims();
         d3.select(sectionID).append("svg")
-            .attr("viewBox", "0 0 860 360");
+            .attr("viewBox", "0 0 " + width + " " + height);
     }
 
     function lineChartUpdate(isInitial) {
+        updateChartDims();
+        d3.select(sectionID).select("svg").attr("viewBox", "0 0 " + width + " " + height);
         var inp = readInputs();
         totalArray = computeArray(inp.p, inp.r, inp.t, inp.c, inp.e);
         updatePanel();
 
-        var series = d3.stack().keys(KEYS)(totalArray);
-
         var maxT = Math.max(
-            totalArray[totalArray.length - 1].time,
+            inp.t,
             savedScenarios.reduce(function(m, sc) { return Math.max(m, sc.t); }, 0)
         );
+
+        // Build grouped x-axis domain; on mobile collapses 10+ year projections into intervals
+        var groupSize    = getMobileGroupSize(maxT);
+        var displayTimes = buildDisplayTimes(maxT, groupSize);
+
+        // Ensure every scenario's endpoint year is in the domain so lines can terminate correctly
+        savedScenarios.forEach(function(sc) {
+            if (displayTimes.indexOf(sc.t) === -1) displayTimes.push(sc.t);
+        });
+        if (displayTimes.indexOf(inp.t) === -1) displayTimes.push(inp.t);
+        displayTimes.sort(function(a, b) { return a - b; });
+
+        // Bars use current-scenario data sampled at displayTimes checkpoints
+        var barTimes    = displayTimes.filter(function(t) { return t <= inp.t; });
+        var displayData = barTimes.map(function(t) { return totalArray[t]; });
+
+        var series = d3.stack().keys(KEYS)(displayData);
 
         var yMax = d3.max(series, function(s) { return d3.max(s, function(d) { return d[1]; }); });
         savedScenarios.forEach(function(sc) {
@@ -713,7 +1090,7 @@
         });
 
         var x = d3.scaleBand()
-            .domain(d3.range(0, maxT + 1))
+            .domain(displayTimes)
             .range([margin.left, width - margin.right])
             .padding(PADDING);
 
@@ -726,7 +1103,7 @@
 
         var xAxis = function(g) {
             g.attr("transform", "translate(0," + (height - margin.bottom) + ")")
-             .call(d3.axisBottom(x).tickFormat(d3.format("d")).ticks(Math.min(maxT, 20)).tickSizeOuter(0));
+             .call(d3.axisBottom(x).tickFormat(d3.format("d")).tickSizeOuter(0));
         };
 
         var yAxis = function(g) {
@@ -737,7 +1114,10 @@
 
         var svg = d3.select(sectionID).select("svg");
 
+        var ANIM_MS = 3000;
+
         if (isInitial) {
+            // Draw bars at their final positions immediately
             var groups = svg.selectAll("g.bar-group")
                 .data(series)
                 .join(function(enter) { return enter.append("g").attr("class", "bar-group"); })
@@ -745,20 +1125,33 @@
 
             var bars = groups.selectAll("rect").data(function(d) { return d; })
                 .join("rect")
-                .attr("x", function(d) { return x(d.data.time); })
-                .attr("width", x.bandwidth())
-                .attr("y", y(0))
-                .attr("height", 0);
-
-            bars.transition().duration(3000)
-                .attr("y", function(d) { return y(d[1]); })
+                .attr("x",      function(d) { return x(d.data.time); })
+                .attr("width",  x.bandwidth())
+                .attr("y",      function(d) { return y(d[1]); })
                 .attr("height", function(d) { return y(d[0]) - y(d[1]); });
 
             attachTooltip(bars);
 
-            // Count-up hero number
+            // White cover rect sits over the bars and shrinks upward, revealing them
+            // from the baseline up. Axes/legend are appended after this in SVG order
+            // so they remain visible on top throughout. This approach avoids SVG
+            // clipPath url() references which break on iOS Safari when ancestors
+            // have CSS transforms (our mobile sheet does).
+            var coverRect = svg.append("rect")
+                .attr("class", "bar-cover")
+                .attr("x",      margin.left)
+                .attr("y",      margin.top)
+                .attr("width",  width - margin.left - margin.right)
+                .attr("height", height - margin.top - margin.bottom)
+                .attr("fill",   "#fff");
+
+            coverRect.transition().duration(ANIM_MS)
+                .attr("height", 0)
+                .on("end", function() { coverRect.remove(); });
+
+            // Count-up hero number — same duration as bar animation
             var numFmt = d3.format(",d");
-            d3.select("#result").transition().duration(3000)
+            d3.select("#result").transition().duration(ANIM_MS)
                 .tween("text", function() {
                     var el = d3.select(this);
                     var interp = d3.interpolateNumber(0, yMax);
@@ -766,6 +1159,7 @@
                 });
 
         } else {
+            svg.selectAll(".bar-cover").remove();
             svg.selectAll("g.bar-group").remove();
             var gs = svg.selectAll("g.bar-group").data(series)
                 .enter().append("g").attr("class", "bar-group")
@@ -781,23 +1175,26 @@
             attachTooltip(rects);
         }
 
-        // Saved scenario lines
+        // Saved scenario lines — sampled at the same displayTimes checkpoints as the bars
         svg.selectAll(".sc-line").remove();
         savedScenarios.forEach(function(sc) {
+            var scTimes      = displayTimes.filter(function(t) { return t <= sc.t; });
+            var scData       = scTimes.map(function(t) { return sc.totalArray[t]; });
+
             var lineGen = d3.line()
                 .x(function(d) { return x(d.time) + x.bandwidth() / 2; })
                 .y(function(d) { return y(d.amount); });
 
             svg.append("path")
                 .attr("class", "sc-line")
-                .datum(sc.totalArray)
+                .datum(scData)
                 .attr("fill", "none")
                 .attr("stroke", sc.color)
                 .attr("stroke-width", 2.5)
                 .attr("stroke-dasharray", "7,4")
                 .attr("d", lineGen);
 
-            var last = sc.totalArray[sc.totalArray.length - 1];
+            var last = scData[scData.length - 1];
             svg.append("circle").attr("class", "sc-line")
                 .attr("cx", x(last.time) + x.bandwidth() / 2)
                 .attr("cy", y(last.amount))
@@ -849,22 +1246,39 @@
     }
 
     // ── Init ──────────────────────────────────────────────
+    setupMobileInputs();
     lineChartCreate();
     lineChartUpdate(true);
+    updateSaveBtn();
 
-    // Live updates
+    // Live updates + validation
     var debounceTimer;
     function scheduleUpdate() {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(function() { lineChartUpdate(false); }, 400);
     }
     ['p','r','t','c','e'].forEach(function(id) {
-        document.getElementById(id).addEventListener('input', scheduleUpdate);
+        document.getElementById(id).addEventListener('input', function() {
+            scheduleUpdate();
+            // Clear error as soon as the field becomes valid (don't add new errors while typing)
+            if (fieldError(id) === '') clearFieldError(id);
+            updateSaveBtn();
+        });
+        document.getElementById(id).addEventListener('blur', function() {
+            showFieldError(id);
+            updateSaveBtn();
+        });
     });
 
     // Save scenario
     document.getElementById("saveBtn").addEventListener("click", function() {
         if (savedScenarios.length >= MAX_SAVED) return;
+        // Validate all fields and surface any errors before saving
+        var inputsValid = ['p', 'r', 't', 'c', 'e'].reduce(function(ok, id) {
+            return showFieldError(id) && ok;
+        }, true);
+        if (!inputsValid) { updateSaveBtn(); return; }
+
         var nameEl = document.getElementById("scenarioName");
         var name   = nameEl.value.trim();
         if (!name) {
@@ -887,6 +1301,23 @@
 
     document.getElementById("scenarioName").addEventListener("keydown", function(e) {
         if (e.key === "Enter") document.getElementById("saveBtn").click();
+    });
+
+    // ── Mobile sheet controls ─────────────────────────────
+    document.getElementById("mobileConfigBtn").addEventListener("click", openSheet);
+    document.getElementById("sheetDoneBtn").addEventListener("click", closeSheet);
+    document.getElementById("mobileOverlay").addEventListener("click", closeSheet);
+
+    // ── Resize: re-run layout and redraw in place ────────
+    // Do NOT remove/recreate the SVG — that would kill any in-progress animation.
+    // lineChartUpdate already updates the viewBox and redraws all content.
+    var resizeTimer;
+    window.addEventListener("resize", function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function() {
+            setupMobileInputs();
+            lineChartUpdate(false);
+        }, 200);
     });
 </script>
 </body>
