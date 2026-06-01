@@ -5,184 +5,281 @@
 <head>
     <title>Retirement Calculator</title>
     <script src="https://d3js.org/d3.v5.min.js"></script>
-    <link href="https://fonts.googleapis.com/css?family=Oswald" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
-        .axis, .axisLabel {
-            font-family: sans-serif;
-            font-size: 10px;
-        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            margin: 0;
-            background-color: #ffffff;
             font-family: sans-serif;
             font-size: 14px;
             color: #000;
+            height: 100vh;
+            overflow: hidden;
         }
 
-        .title {
+        /* ── App shell ── */
+        #app {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* ══════════════════════════════════════════
+           LEFT PANEL
+        ══════════════════════════════════════════ */
+        #leftPanel {
+            width: 420px;
+            min-width: 320px;
+            flex-shrink: 0;
+            background: linear-gradient(160deg, #8b6ff5 0%, #5a38e0 55%, #3a1fa0 100%);
+            color: #fff;
+            padding: clamp(16px, 3.5vh, 36px) 32px;
+            display: flex;
+            flex-direction: column;
+            gap: clamp(8px, 2vh, 24px);
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Large decorative $ watermark */
+        #leftPanel::before {
+            content: "$";
+            position: absolute;
             font-family: 'Oswald', sans-serif;
-            font-size: 30px;
-            text-align: center;
-            margin: 25px 0 0;
+            font-size: 380px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.05);
+            right: -40px;
+            bottom: -60px;
+            line-height: 1;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        .appTitle {
+            font-family: 'Oswald', sans-serif;
+            font-size: 13px;
+            font-weight: 400;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.55);
+        }
+
+        /* ── Hero metric ── */
+        .metaLabel {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: rgba(255,255,255,0.55);
+            margin-bottom: 6px;
+        }
+
+        #result {
+            font-family: 'Oswald', sans-serif;
+            font-size: clamp(34px, 5.5vh, 54px);
+            font-weight: 700;
+            line-height: 1;
+            letter-spacing: -1px;
+            color: #fff;
+        }
+
+        #heroYears {
+            font-size: 12px;
+            color: rgba(255,255,255,0.5);
+            margin-top: 8px;
+        }
+
+        /* ── Secondary metrics ── */
+        #secondaryMetrics {
+            display: flex;
+        }
+
+        .secMetric { flex: 1; }
+
+        .secMetric + .secMetric {
+            border-left: 1px solid rgba(255,255,255,0.15);
+            padding-left: 20px;
+            margin-left: 4px;
+        }
+
+        .secVal {
+            font-family: 'Oswald', sans-serif;
+            font-size: clamp(15px, 2.5vh, 22px);
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .secLabel {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: rgba(255,255,255,0.5);
+            margin-top: 4px;
+        }
+
+        /* ── Divider ── */
+        .panelDivider {
+            border: none;
+            border-top: 1px solid rgba(255,255,255,0.14);
         }
 
         /* ── Inputs ── */
-        #inputsStrip {
-            display: flex;
-            gap: 12px;
-            padding: 20px 10%;
-            flex-wrap: wrap;
+        #inputsGrid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: clamp(8px, 1.5vh, 14px);
+        }
+
+        #inputsGrid .inputGroup.full {
+            grid-column: 1 / -1;
         }
 
         .inputGroup {
             display: flex;
             flex-direction: column;
-            flex: 1;
-            min-width: 120px;
         }
 
         .inputGroup label {
-            font-size: 11px;
-            color: #868B8E;
+            font-size: 10px;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.06em;
+            color: rgba(255,255,255,0.55);
             margin-bottom: 6px;
         }
 
         .inputGroup input {
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 8px 10px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 6px;
+            padding: 9px 11px;
             font-size: 14px;
+            color: #fff;
             width: 100%;
-            box-sizing: border-box;
-            color: #000;
-            background: #fff;
-            transition: border-color 0.15s;
+            transition: background 0.15s, border-color 0.15s;
+            /* Remove browser number arrows */
+            -moz-appearance: textfield;
+            appearance: textfield;
         }
+
+        .inputGroup input::-webkit-outer-spin-button,
+        .inputGroup input::-webkit-inner-spin-button { -webkit-appearance: none; }
 
         .inputGroup input:focus {
             outline: none;
-            border-color: #7657f4;
+            background: rgba(255,255,255,0.16);
+            border-color: rgba(255,255,255,0.45);
         }
+
+        .inputGroup input::placeholder { color: rgba(255,255,255,0.3); }
 
         /* ── Save bar ── */
         #saveBar {
             display: flex;
+            gap: 8px;
             align-items: center;
-            gap: 10px;
-            padding: 0 10% 20px;
         }
 
         #scenarioName {
-            border: 1.5px solid #ddd;
-            border-radius: 4px;
-            padding: 7px 12px;
-            font-size: 14px;
-            width: 220px;
-            transition: border-color 0.15s;
+            flex: 1;
+            background: rgba(255,255,255,0.1);
+            border: 1.5px solid rgba(255,255,255,0.18);
+            border-radius: 6px;
+            padding: 9px 11px;
+            font-size: 13px;
+            color: #fff;
+            transition: border-color 0.15s, background 0.15s;
         }
 
-        #scenarioName:focus { outline: none; border-color: #7657f4; }
-        #scenarioName::placeholder { color: #bbb; }
-        #scenarioName.error { border-color: #e83b3b; }
+        #scenarioName::placeholder { color: rgba(255,255,255,0.35); }
+        #scenarioName:focus { outline: none; background: rgba(255,255,255,0.16); border-color: rgba(255,255,255,0.45); }
+        #scenarioName.error { border-color: #ff6b6b; }
 
         #saveBtn {
             font-family: sans-serif;
-            font-size: 13px;
-            padding: 7px 18px;
-            border: 1.5px solid #7657f4;
-            border-radius: 5px;
-            background: #7657f4;
-            color: #fff;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 9px 14px;
+            border: none;
+            border-radius: 6px;
+            background: #fff;
+            color: #5a38e0;
             cursor: pointer;
             white-space: nowrap;
-            transition: background 0.15s;
+            transition: opacity 0.15s;
+            flex-shrink: 0;
         }
 
-        #saveBtn:hover:not(:disabled) { background: #5a3fd4; }
+        #saveBtn:hover:not(:disabled) { opacity: 0.88; }
+        #saveBtn:disabled { background: rgba(255,255,255,0.25); color: rgba(255,255,255,0.5); cursor: not-allowed; }
 
-        #saveBtn:disabled {
-            background: #ccc;
-            border-color: #ccc;
-            cursor: not-allowed;
-        }
-
-        /* ── Summary cards (working scenario) ── */
-        #summaryCards {
-            display: flex;
-            gap: 16px;
-            padding: 0 10% 20px;
-        }
-
-        .card {
+        /* ══════════════════════════════════════════
+           RIGHT PANEL
+        ══════════════════════════════════════════ */
+        #rightPanel {
             flex: 1;
-            background: #f7f7f7;
-            border-radius: 8px;
-            padding: 20px;
-            text-align: center;
+            background: #fff;
+            padding: 36px 40px 32px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            min-width: 0;
         }
 
-        .cardLabel {
-            font-size: 11px;
-            color: #868B8E;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 10px;
+        #chartWrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            min-height: 0;
         }
 
-        .cardValue {
-            font-family: 'Oswald', sans-serif;
-            font-size: 28px;
+        #chart {
+            width: 100%;
         }
 
-        /* ── Chart ── */
-        .chart {
-            border-radius: 5px;
-            background-color: #f7f7f7;
-            margin: 0 10% 40px;
-            padding: 2% 2%;
-            text-align: center;
+        #chart svg {
+            width: 100%;
+            height: auto;
+            display: block;
         }
 
-        /* ── Saved scenarios section ── */
+        /* ── Saved scenarios ── */
         #savedSection {
             display: none;
-            margin: 0 10% 48px;
+            border-top: 1px solid #ebebeb;
+            padding-top: 28px;
+            margin-top: 8px;
         }
 
         .savedSectionHeader {
             display: flex;
             align-items: baseline;
-            gap: 8px;
+            gap: 10px;
             margin-bottom: 16px;
         }
 
         .savedSectionTitle {
             font-family: 'Oswald', sans-serif;
-            font-size: 20px;
+            font-size: 18px;
+            font-weight: 600;
         }
 
-        .savedSectionSubtitle {
+        .savedSectionSub {
             font-size: 12px;
-            color: #868B8E;
+            color: #999;
         }
 
         #savedCards {
             display: flex;
-            gap: 16px;
+            gap: 14px;
             flex-wrap: wrap;
         }
 
         .savedCard {
             flex: 1;
-            min-width: 180px;
-            background: #f7f7f7;
-            border-radius: 8px;
+            min-width: 160px;
+            background: #fafafa;
+            border-radius: 10px;
             border-top: 3px solid #ddd;
             padding: 16px;
-            box-sizing: border-box;
         }
 
         .savedCardHeader {
@@ -194,31 +291,30 @@
 
         .savedCardName {
             font-weight: 700;
-            font-size: 14px;
+            font-size: 13px;
             display: flex;
             align-items: center;
             gap: 7px;
         }
 
         .scDot {
-            width: 10px;
-            height: 10px;
+            width: 9px;
+            height: 9px;
             border-radius: 50%;
             flex-shrink: 0;
-            display: inline-block;
         }
 
         .deleteBtn {
             background: none;
             border: none;
-            color: #bbb;
+            color: #ccc;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 18px;
             line-height: 1;
-            padding: 0 2px;
+            padding: 0;
         }
 
-        .deleteBtn:hover { color: #666; }
+        .deleteBtn:hover { color: #888; }
 
         .savedCardPills {
             display: flex;
@@ -228,16 +324,16 @@
         }
 
         .pill {
-            background: #e8e8e8;
+            background: #ebebeb;
             border-radius: 3px;
             padding: 3px 7px;
             font-size: 11px;
-            color: #444;
+            color: #555;
         }
 
         .savedCardMetrics {
             display: flex;
-            gap: 6px;
+            gap: 4px;
         }
 
         .savedMetric {
@@ -248,14 +344,21 @@
         .savedMetricVal {
             font-family: 'Oswald', sans-serif;
             font-size: 15px;
+            font-weight: 600;
         }
 
         .savedMetricLabel {
-            font-size: 10px;
-            color: #868B8E;
+            font-size: 9px;
+            color: #999;
             text-transform: uppercase;
-            letter-spacing: 0.03em;
-            margin-top: 2px;
+            letter-spacing: 0.04em;
+            margin-top: 3px;
+        }
+
+        /* ── Axis / chart text ── */
+        .axis, .axisLabel {
+            font-family: sans-serif;
+            font-size: 10px;
         }
 
         /* ── Tooltip ── */
@@ -270,7 +373,7 @@
             opacity: 0;
             transition: opacity 0.12s;
             min-width: 210px;
-            box-shadow: 0 6px 24px rgba(0,0,0,0.28);
+            box-shadow: 0 8px 28px rgba(0,0,0,0.3);
             z-index: 100;
         }
 
@@ -309,469 +412,483 @@
         }
 
         .tt-label { display: flex; align-items: center; }
+
+        /* ── Responsive fallback ── */
+        @media (max-width: 720px) {
+            body { overflow: auto; }
+            #app { flex-direction: column; height: auto; }
+            #leftPanel { width: 100%; min-width: 0; }
+            #rightPanel { padding: 24px 20px; }
+        }
     </style>
 </head>
 
 <body>
-    <p class="title">Retirement Calculator</p>
+<div id="app">
 
-    <div id="inputsStrip">
-        <div class="inputGroup">
-            <label for="p">Starting Amount</label>
-            <input id="p" type="number" min="0" value="25000">
-        </div>
-        <div class="inputGroup">
-            <label for="r">Rate (%)</label>
-            <input id="r" type="number" min="0" step="0.1" value="8">
-        </div>
-        <div class="inputGroup">
-            <label for="t">Years</label>
-            <input id="t" type="number" min="1" max="50" value="20">
-        </div>
-        <div class="inputGroup">
-            <label for="c">Self Contribution (yr)</label>
-            <input id="c" type="number" min="0" value="15000">
-        </div>
-        <div class="inputGroup">
-            <label for="e">Employer Contribution (yr)</label>
-            <input id="e" type="number" min="0" value="7000">
-        </div>
-    </div>
+    <!-- ══ LEFT PANEL ══ -->
+    <div id="leftPanel">
+        <div class="appTitle">Retirement Calculator</div>
 
-    <div id="saveBar">
-        <input id="scenarioName" type="text" maxlength="30" placeholder="Name this scenario…">
-        <button id="saveBtn">Save Scenario</button>
-    </div>
+        <section id="hero">
+            <div class="metaLabel">Total Savings</div>
+            <div id="result"></div>
+            <div id="heroYears" class="heroYears"></div>
+        </section>
 
-    <div id="summaryCards">
-        <div class="card">
-            <div class="cardLabel">Total Savings</div>
-            <div class="cardValue" id="result"></div>
-        </div>
-        <div class="card">
-            <div class="cardLabel">Total Contributed</div>
-            <div class="cardValue" id="contributed"></div>
-        </div>
-        <div class="card">
-            <div class="cardLabel">Total Interest Earned</div>
-            <div class="cardValue" id="interest"></div>
-        </div>
-    </div>
+        <section id="secondaryMetrics">
+            <div class="secMetric">
+                <div id="contributed" class="secVal"></div>
+                <div class="secLabel">Contributed</div>
+            </div>
+            <div class="secMetric">
+                <div id="interest" class="secVal"></div>
+                <div class="secLabel">Interest Earned</div>
+            </div>
+        </section>
 
-    <div id="chart" class="chart"></div>
+        <hr class="panelDivider">
 
-    <div id="savedSection">
-        <div class="savedSectionHeader">
-            <span class="savedSectionTitle">Saved Scenarios</span>
-            <span class="savedSectionSubtitle" id="savedCount"></span>
+        <div id="inputsGrid">
+            <div class="inputGroup">
+                <label for="p">Starting Amount</label>
+                <input id="p" type="number" min="0" value="25000">
+            </div>
+            <div class="inputGroup">
+                <label for="r">Rate (%)</label>
+                <input id="r" type="number" min="0" step="0.1" value="8">
+            </div>
+            <div class="inputGroup">
+                <label for="t">Years</label>
+                <input id="t" type="number" min="1" max="50" value="20">
+            </div>
+            <div class="inputGroup">
+                <label for="c">Self Contribution (yr)</label>
+                <input id="c" type="number" min="0" value="15000">
+            </div>
+            <div class="inputGroup full">
+                <label for="e">Employer Contribution (yr)</label>
+                <input id="e" type="number" min="0" value="7000">
+            </div>
         </div>
-        <div id="savedCards"></div>
-    </div>
 
-    <div id="tooltip">
-        <div class="tt-year" id="ttYear"></div>
-        <div class="tt-row">
-            <span class="tt-label"><span class="tt-dot" id="ttDotInterest" style="background:#68d0fa"></span>Interest</span>
-            <span id="ttInterest"></span>
-        </div>
-        <div class="tt-row">
-            <span class="tt-label"><span class="tt-dot" id="ttDotWork" style="background:#BFB5FF"></span>Work Contributions</span>
-            <span id="ttWork"></span>
-        </div>
-        <div class="tt-row">
-            <span class="tt-label"><span class="tt-dot" id="ttDotSelf" style="background:#7657f4"></span>Self Contributions</span>
-            <span id="ttSelf"></span>
-        </div>
-        <div class="tt-row tt-total">
-            <span>Total</span>
-            <span id="ttTotal"></span>
+        <hr class="panelDivider">
+
+        <div id="saveBar">
+            <input id="scenarioName" type="text" maxlength="30" placeholder="Name this scenario…">
+            <button id="saveBtn">Save</button>
         </div>
     </div>
 
-    <script>
-        var KEYS        = ['Self Contributions', 'Work Contributions', 'Interest'];
-        var BAR_COLORS  = { 'Self Contributions': '#7657f4', 'Work Contributions': '#BFB5FF', 'Interest': '#68d0fa' };
-        var SC_COLORS   = ['#e8774a', '#2baa6a', '#1680d4', '#c94fa0'];
-        var MAX_SAVED   = 4;
+    <!-- ══ RIGHT PANEL ══ -->
+    <div id="rightPanel">
+        <div id="chartWrapper">
+            <div id="chart"></div>
+        </div>
 
-        var sectionID = "#chart";
-        var PADDING   = 0.15;
-        var margin    = { top: 20, right: 50, bottom: 10, left: 50 };
-        var width     = 960 - margin.left - margin.right;
-        var height    = 350 - margin.top - margin.bottom;
+        <div id="savedSection">
+            <div class="savedSectionHeader">
+                <span class="savedSectionTitle">Saved Scenarios</span>
+                <span class="savedSectionSub" id="savedCount"></span>
+            </div>
+            <div id="savedCards"></div>
+        </div>
+    </div>
 
-        var totalArray    = [];
-        var savedScenarios = []; // [{name, p, r, t, c, e, totalArray, color}]
+</div>
 
-        var ttEl = document.getElementById("tooltip");
+<!-- Tooltip -->
+<div id="tooltip">
+    <div class="tt-year" id="ttYear"></div>
+    <div class="tt-row">
+        <span class="tt-label"><span class="tt-dot" style="background:#68d0fa"></span>Interest</span>
+        <span id="ttInterest"></span>
+    </div>
+    <div class="tt-row">
+        <span class="tt-label"><span class="tt-dot" style="background:#BFB5FF"></span>Work Contributions</span>
+        <span id="ttWork"></span>
+    </div>
+    <div class="tt-row">
+        <span class="tt-label"><span class="tt-dot" style="background:#7657f4"></span>Self Contributions</span>
+        <span id="ttSelf"></span>
+    </div>
+    <div class="tt-row tt-total">
+        <span>Total</span>
+        <span id="ttTotal"></span>
+    </div>
+</div>
 
-        // ── Formatting ──────────────────────────────────────────
-        function fmtDollar(v) {
-            return "$" + Math.round(Math.abs(v)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        }
+<script>
+    var KEYS       = ['Self Contributions', 'Work Contributions', 'Interest'];
+    var BAR_COLORS = { 'Self Contributions': '#7657f4', 'Work Contributions': '#BFB5FF', 'Interest': '#68d0fa' };
+    var SC_COLORS  = ['#e8774a', '#2baa6a', '#1680d4', '#c94fa0'];
+    var MAX_SAVED  = 4;
 
-        function fmtCompact(v) {
-            v = Math.round(Math.abs(v));
-            if (v >= 1000000) return "$" + (v / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
-            if (v >= 1000)    return "$" + Math.round(v / 1000) + "k";
-            return "$" + v;
-        }
+    var sectionID = "#chart";
+    var PADDING   = 0.15;
+    var margin    = { top: 30, right: 30, bottom: 10, left: 55 };
+    var width     = 860 - margin.left - margin.right;
+    var height    = 360 - margin.top - margin.bottom;
 
-        // ── Calculation ─────────────────────────────────────────
-        function computeArray(p, r, t, c, e) {
-            var n = 1, ce = c + e, selfBal = p, workBal = 0, arr = [];
-            for (var i = 0; i <= t; i++) {
-                var base   = Math.pow(1 + r / (n * 100), n * i);
-                var amount = p * base + (r > 0 ? ce * ((base - 1) / (r / (n * 100))) : ce * i);
-                arr.push({
-                    time: i, amount: amount,
-                    'Self Contributions': selfBal,
-                    'Work Contributions': workBal,
-                    Interest: amount - selfBal - workBal
-                });
-                selfBal += c;
-                workBal += e;
-            }
-            return arr;
-        }
+    var totalArray     = [];
+    var savedScenarios = [];
+    var ttEl           = document.getElementById("tooltip");
 
-        function readInputs() {
-            return {
-                p: +document.getElementById("p").value,
-                r: +document.getElementById("r").value,
-                t: +document.getElementById("t").value,
-                c: +document.getElementById("c").value,
-                e: +document.getElementById("e").value
-            };
-        }
+    // ── Formatting ──────────────────────────────────────
+    function fmtDollar(v) {
+        return "$" + Math.round(Math.abs(v)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
 
-        // ── Summary cards ───────────────────────────────────────
-        function updateCards() {
-            var inp  = readInputs();
-            var last = totalArray[totalArray.length - 1];
-            var sav  = Math.round(last.amount);
-            var con  = Math.round(inp.p + (inp.c + inp.e) * inp.t);
-            var int_ = sav - con;
-            document.getElementById("result").textContent      = fmtDollar(sav);
-            document.getElementById("contributed").textContent = fmtDollar(con);
-            document.getElementById("interest").textContent    = fmtDollar(Math.max(0, int_));
-        }
+    function fmtCompact(v) {
+        v = Math.round(Math.abs(v));
+        if (v >= 1000000) return "$" + (v / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
+        if (v >= 1000)    return "$" + Math.round(v / 1000) + "k";
+        return "$" + v;
+    }
 
-        // ── Saved scenarios section ──────────────────────────────
-        function renderSavedSection() {
-            var section = document.getElementById("savedSection");
-            var container = document.getElementById("savedCards");
-            var saveBtn = document.getElementById("saveBtn");
-
-            if (savedScenarios.length === 0) {
-                section.style.display = "none";
-                saveBtn.disabled = false;
-                saveBtn.textContent = "Save Scenario";
-                return;
-            }
-
-            section.style.display = "block";
-            document.getElementById("savedCount").textContent =
-                savedScenarios.length + " of " + MAX_SAVED;
-
-            saveBtn.disabled = savedScenarios.length >= MAX_SAVED;
-            saveBtn.textContent = savedScenarios.length >= MAX_SAVED
-                ? "Max 4 saved" : "Save Scenario";
-
-            container.innerHTML = "";
-
-            savedScenarios.forEach(function(sc, idx) {
-                var sav = Math.round(sc.totalArray[sc.totalArray.length - 1].amount);
-                var con = Math.round(sc.p + (sc.c + sc.e) * sc.t);
-                var int_ = Math.max(0, sav - con);
-
-                var card = document.createElement("div");
-                card.className = "savedCard";
-                card.style.borderTopColor = sc.color;
-
-                card.innerHTML =
-                    '<div class="savedCardHeader">' +
-                        '<span class="savedCardName">' +
-                            '<span class="scDot" style="background:' + sc.color + '"></span>' +
-                            escHtml(sc.name) +
-                        '</span>' +
-                        '<button class="deleteBtn" data-idx="' + idx + '" title="Remove">×</button>' +
-                    '</div>' +
-                    '<div class="savedCardPills">' +
-                        '<span class="pill">Start ' + fmtCompact(sc.p) + '</span>' +
-                        '<span class="pill">' + sc.r + '% rate</span>' +
-                        '<span class="pill">' + sc.t + ' yrs</span>' +
-                        '<span class="pill">Self ' + fmtCompact(sc.c) + '/yr</span>' +
-                        '<span class="pill">Employer ' + fmtCompact(sc.e) + '/yr</span>' +
-                    '</div>' +
-                    '<div class="savedCardMetrics">' +
-                        metric(fmtDollar(sav),  "Total Savings") +
-                        metric(fmtDollar(con),  "Contributed") +
-                        metric(fmtDollar(int_), "Interest") +
-                    '</div>';
-
-                container.appendChild(card);
+    // ── Calculation ─────────────────────────────────────
+    function computeArray(p, r, t, c, e) {
+        var n = 1, ce = c + e, selfBal = p, workBal = 0, arr = [];
+        for (var i = 0; i <= t; i++) {
+            var base   = Math.pow(1 + r / (n * 100), n * i);
+            var amount = p * base + (r > 0 ? ce * ((base - 1) / (r / (n * 100))) : ce * i);
+            arr.push({
+                time: i, amount: amount,
+                'Self Contributions': selfBal,
+                'Work Contributions': workBal,
+                Interest: amount - selfBal - workBal
             });
+            selfBal += c;
+            workBal += e;
+        }
+        return arr;
+    }
 
-            container.querySelectorAll(".deleteBtn").forEach(function(btn) {
-                btn.addEventListener("click", function() {
-                    var idx = +this.getAttribute("data-idx");
-                    savedScenarios.splice(idx, 1);
-                    savedScenarios.forEach(function(sc, i) { sc.color = SC_COLORS[i]; });
-                    renderSavedSection();
-                    lineChartUpdate(false);
-                });
-            });
+    function readInputs() {
+        return {
+            p: +document.getElementById("p").value,
+            r: +document.getElementById("r").value,
+            t: +document.getElementById("t").value,
+            c: +document.getElementById("c").value,
+            e: +document.getElementById("e").value
+        };
+    }
+
+    // ── Left panel metrics ───────────────────────────────
+    function updatePanel() {
+        var inp  = readInputs();
+        var last = totalArray[totalArray.length - 1];
+        var sav  = Math.round(last.amount);
+        var con  = Math.round(inp.p + (inp.c + inp.e) * inp.t);
+        var int_ = sav - con;
+
+        document.getElementById("result").textContent      = fmtDollar(sav);
+        document.getElementById("contributed").textContent = fmtDollar(con);
+        document.getElementById("interest").textContent    = fmtDollar(Math.max(0, int_));
+        document.getElementById("heroYears").textContent   =
+            "after " + inp.t + " year" + (inp.t === 1 ? "" : "s");
+    }
+
+    // ── Saved scenarios ──────────────────────────────────
+    function renderSavedSection() {
+        var section   = document.getElementById("savedSection");
+        var container = document.getElementById("savedCards");
+        var saveBtn   = document.getElementById("saveBtn");
+
+        if (savedScenarios.length === 0) {
+            section.style.display = "none";
+            saveBtn.disabled      = false;
+            saveBtn.textContent   = "Save";
+            return;
         }
 
-        function metric(val, label) {
-            return '<div class="savedMetric">' +
-                '<div class="savedMetricVal">' + val + '</div>' +
-                '<div class="savedMetricLabel">' + label + '</div>' +
-            '</div>';
-        }
+        section.style.display = "block";
+        document.getElementById("savedCount").textContent =
+            savedScenarios.length + " of " + MAX_SAVED;
+        saveBtn.disabled    = savedScenarios.length >= MAX_SAVED;
+        saveBtn.textContent = savedScenarios.length >= MAX_SAVED ? "Max 4" : "Save";
 
-        function escHtml(s) {
-            return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-        }
+        container.innerHTML = "";
+        savedScenarios.forEach(function(sc, idx) {
+            var sav  = Math.round(sc.totalArray[sc.totalArray.length - 1].amount);
+            var con  = Math.round(sc.p + (sc.c + sc.e) * sc.t);
+            var int_ = Math.max(0, sav - con);
 
-        // ── Tooltip ─────────────────────────────────────────────
-        function showTooltip(d) {
-            var pt = d.data;
-            document.getElementById("ttYear").textContent     = "Year " + pt.time;
-            document.getElementById("ttSelf").textContent     = fmtDollar(pt['Self Contributions']);
-            document.getElementById("ttWork").textContent     = fmtDollar(pt['Work Contributions']);
-            document.getElementById("ttInterest").textContent = fmtDollar(pt.Interest);
-            document.getElementById("ttTotal").textContent    = fmtDollar(pt.amount);
-            ttEl.style.opacity = "1";
-        }
-
-        function moveTooltip(ev) {
-            var ttW = ttEl.offsetWidth || 220, ttH = ttEl.offsetHeight || 130;
-            var left = ev.clientX + 16, top = ev.clientY - ttH / 2;
-            if (left + ttW > window.innerWidth  - 12) left = ev.clientX - ttW - 16;
-            if (top  + ttH > window.innerHeight - 12) top  = window.innerHeight - ttH - 12;
-            if (top < 8) top = 8;
-            ttEl.style.left = left + "px";
-            ttEl.style.top  = top  + "px";
-        }
-
-        function attachTooltip(sel) {
-            sel.on("mouseover", function(d) { showTooltip(d); })
-               .on("mousemove", function()  { moveTooltip(d3.event); })
-               .on("mouseout",  function()  { ttEl.style.opacity = "0"; });
-        }
-
-        // ── Chart ────────────────────────────────────────────────
-        function lineChartCreate() {
-            d3.select(sectionID).append("svg").attr("viewBox", "0 0 800 350");
-        }
-
-        function lineChartUpdate(isInitial) {
-            var inp = readInputs();
-            totalArray = computeArray(inp.p, inp.r, inp.t, inp.c, inp.e);
-            updateCards();
-
-            var series = d3.stack().keys(KEYS)(totalArray);
-
-            // x domain: widest year range across working + all saved scenarios
-            var maxT = Math.max(
-                totalArray[totalArray.length - 1].time,
-                savedScenarios.reduce(function(m, sc) { return Math.max(m, sc.t); }, 0)
-            );
-            var xDomain = d3.range(0, maxT + 1);
-
-            // y domain: working bars max AND saved scenario line peaks
-            var yMax = d3.max(series, function(d) { return d3.max(d, function(d) { return d[1]; }); });
-            savedScenarios.forEach(function(sc) {
-                var scMax = sc.totalArray[sc.totalArray.length - 1].amount;
-                if (scMax > yMax) yMax = scMax;
-            });
-
-            var x = d3.scaleBand()
-                .domain(xDomain)
-                .range([margin.left, width - margin.right])
-                .padding(PADDING);
-
-            var y = d3.scaleLinear()
-                .domain([0, yMax])
-                .rangeRound([height - margin.bottom, margin.top]);
-
-            var colorFn = d3.scaleOrdinal().domain(KEYS).range(KEYS.map(function(k) { return BAR_COLORS[k]; }));
-
-            var xAxis = function(g) {
-                g.attr("transform", "translate(0," + (height - margin.bottom) + ")")
-                 .call(d3.axisBottom(x).tickFormat(d3.format("d")).ticks(width / 80).tickSizeOuter(0));
-            };
-
-            var yAxis = function(g) {
-                g.attr("transform", "translate(" + margin.left + ",0)")
-                 .call(d3.axisLeft(y).ticks(5).tickFormat(d3.format('$,.3s')))
-                 .call(function(g) { g.selectAll(".domain").remove(); });
-            };
-
-            var svg = d3.select(sectionID).select("svg");
-
-            if (isInitial) {
-                var groups = svg.selectAll("g.bar-group")
-                    .data(series)
-                    .join(function(enter) { return enter.append("g").attr("class", "bar-group"); })
-                    .attr("fill", function(d) { return colorFn(d.key); });
-
-                var bars = groups.selectAll("rect").data(function(d) { return d; })
-                    .join("rect")
-                    .attr("x", function(d) { return x(d.data.time); })
-                    .attr("width", x.bandwidth())
-                    .attr("y", y(0))
-                    .attr("height", 0);
-
-                bars.transition().duration(3000)
-                    .attr("y", function(d) { return y(d[1]); })
-                    .attr("height", function(d) { return y(d[0]) - y(d[1]); });
-
-                attachTooltip(bars);
-
-                // Count-up animation on Total Savings card
-                var numFmt = d3.format(",d");
-                d3.select("#result").transition().duration(3000)
-                    .tween("text", function() {
-                        var el = d3.select(this);
-                        var interp = d3.interpolateNumber(0, yMax);
-                        return function(t) { el.text("$" + numFmt(interp(t))); };
-                    });
-
-            } else {
-                svg.selectAll("g.bar-group").remove();
-
-                var gs = svg.selectAll("g.bar-group").data(series)
-                    .enter().append("g").attr("class", "bar-group")
-                    .attr("fill", function(d) { return colorFn(d.key); });
-
-                var rects = gs.selectAll("rect").data(function(d) { return d; })
-                    .enter().append("rect")
-                    .attr("x", function(d) { return x(d.data.time); })
-                    .attr("width", x.bandwidth())
-                    .attr("y", function(d) { return y(d[1]); })
-                    .attr("height", function(d) { return y(d[0]) - y(d[1]); });
-
-                attachTooltip(rects);
-            }
-
-            // Saved scenario lines (drawn on top of bars)
-            svg.selectAll(".sc-line").remove();
-            savedScenarios.forEach(function(sc) {
-                var lineGen = d3.line()
-                    .x(function(d) { return x(d.time) + x.bandwidth() / 2; })
-                    .y(function(d) { return y(d.amount); });
-
-                svg.append("path")
-                    .attr("class", "sc-line")
-                    .datum(sc.totalArray)
-                    .attr("fill", "none")
-                    .attr("stroke", sc.color)
-                    .attr("stroke-width", 2.5)
-                    .attr("stroke-dasharray", "7,4")
-                    .attr("d", lineGen);
-
-                // Terminal dot at the last year
-                var last = sc.totalArray[sc.totalArray.length - 1];
-                svg.append("circle")
-                    .attr("class", "sc-line")
-                    .attr("cx", x(last.time) + x.bandwidth() / 2)
-                    .attr("cy", y(last.amount))
-                    .attr("r", 4)
-                    .attr("fill", sc.color);
-            });
-
-            // Structural chart elements
-            svg.selectAll(".x-axis, .y-axis, .chart-legend, .axisLabel").remove();
-
-            svg.append("g").call(xAxis).attr("class", "x-axis axis");
-            svg.append("g").call(yAxis).attr("class", "y-axis axis");
-
-            // Bar category legend
-            var reversedKeys = ['Interest', 'Work Contributions', 'Self Contributions'];
-            var lgG = svg.append("g").attr("class", "chart-legend")
-                .attr("font-family", "sans-serif").attr("font-size", 10).attr("text-anchor", "end")
-                .selectAll("g").data(reversedKeys).join("g")
-                .attr("transform", function(d, i) { return "translate(" + (i * (width / 6)) + ",0)"; });
-
-            lgG.append("rect").attr("x", 450).attr("width", 14).attr("height", 14)
-                .attr("fill", function(d) { return BAR_COLORS[d]; });
-            lgG.append("text").attr("x", 446).attr("y", 10).attr("dy", "0.1em")
-                .text(function(d) { return d; });
-
-            // Saved scenario line legend (shown below bar legend when scenarios exist)
-            if (savedScenarios.length) {
-                var scLegG = svg.append("g").attr("class", "chart-legend")
-                    .attr("font-family", "sans-serif").attr("font-size", 10)
-                    .attr("transform", "translate(0,20)");
-
-                savedScenarios.forEach(function(sc, i) {
-                    var gx = margin.left + i * 140;
-                    var gg = scLegG.append("g").attr("transform", "translate(" + gx + ",0)");
-                    // dashed line swatch
-                    gg.append("line")
-                        .attr("x1", 0).attr("y1", 7).attr("x2", 20).attr("y2", 7)
-                        .attr("stroke", sc.color).attr("stroke-width", 2.5)
-                        .attr("stroke-dasharray", "5,3");
-                    gg.append("circle").attr("cx", 20).attr("cy", 7).attr("r", 3).attr("fill", sc.color);
-                    gg.append("text").attr("x", 26).attr("y", 11).attr("fill", "#333")
-                        .text(sc.name);
-                });
-            }
-
-            svg.append("text")
-                .attr("transform", "translate(" + (width / 2) + "," + (height + margin.top + 10) + ")")
-                .style("text-anchor", "middle").attr("class", "axisLabel").text("Years");
-        }
-
-        // ── Init ────────────────────────────────────────────────
-        lineChartCreate();
-        lineChartUpdate(true);
-
-        // Live update
-        var debounceTimer;
-        function scheduleUpdate() {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(function() { lineChartUpdate(false); }, 400);
-        }
-        ['p','r','t','c','e'].forEach(function(id) {
-            document.getElementById(id).addEventListener('input', scheduleUpdate);
+            var card = document.createElement("div");
+            card.className = "savedCard";
+            card.style.borderTopColor = sc.color;
+            card.innerHTML =
+                '<div class="savedCardHeader">' +
+                    '<span class="savedCardName">' +
+                        '<span class="scDot" style="background:' + sc.color + '"></span>' +
+                        escHtml(sc.name) +
+                    '</span>' +
+                    '<button class="deleteBtn" data-idx="' + idx + '">×</button>' +
+                '</div>' +
+                '<div class="savedCardPills">' +
+                    '<span class="pill">' + fmtCompact(sc.p) + ' start</span>' +
+                    '<span class="pill">' + sc.r + '% rate</span>' +
+                    '<span class="pill">' + sc.t + ' yrs</span>' +
+                    '<span class="pill">Self ' + fmtCompact(sc.c) + '</span>' +
+                    '<span class="pill">Employer ' + fmtCompact(sc.e) + '</span>' +
+                '</div>' +
+                '<div class="savedCardMetrics">' +
+                    metric(fmtDollar(sav),  "Total") +
+                    metric(fmtDollar(con),  "Contributed") +
+                    metric(fmtDollar(int_), "Interest") +
+                '</div>';
+            container.appendChild(card);
         });
 
-        // Save scenario
-        document.getElementById("saveBtn").addEventListener("click", function() {
-            if (savedScenarios.length >= MAX_SAVED) return;
+        container.querySelectorAll(".deleteBtn").forEach(function(btn) {
+            btn.addEventListener("click", function() {
+                savedScenarios.splice(+this.dataset.idx, 1);
+                savedScenarios.forEach(function(sc, i) { sc.color = SC_COLORS[i]; });
+                renderSavedSection();
+                lineChartUpdate(false);
+            });
+        });
+    }
 
-            var nameEl = document.getElementById("scenarioName");
-            var name   = nameEl.value.trim();
+    function metric(val, label) {
+        return '<div class="savedMetric">' +
+            '<div class="savedMetricVal">' + val + '</div>' +
+            '<div class="savedMetricLabel">' + label + '</div>' +
+        '</div>';
+    }
 
-            if (!name) {
-                nameEl.classList.add("error");
-                nameEl.focus();
-                setTimeout(function() { nameEl.classList.remove("error"); }, 1200);
-                return;
-            }
+    function escHtml(s) {
+        return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
 
-            var inp = readInputs();
-            savedScenarios.push({
-                name: name,
-                p: inp.p, r: inp.r, t: inp.t, c: inp.c, e: inp.e,
-                totalArray: computeArray(inp.p, inp.r, inp.t, inp.c, inp.e),
-                color: SC_COLORS[savedScenarios.length]
+    // ── Tooltip ──────────────────────────────────────────
+    function showTooltip(d) {
+        var pt = d.data;
+        document.getElementById("ttYear").textContent     = "Year " + pt.time;
+        document.getElementById("ttSelf").textContent     = fmtDollar(pt['Self Contributions']);
+        document.getElementById("ttWork").textContent     = fmtDollar(pt['Work Contributions']);
+        document.getElementById("ttInterest").textContent = fmtDollar(pt.Interest);
+        document.getElementById("ttTotal").textContent    = fmtDollar(pt.amount);
+        ttEl.style.opacity = "1";
+    }
+
+    function moveTooltip(ev) {
+        var ttW = ttEl.offsetWidth || 220, ttH = ttEl.offsetHeight || 140;
+        var left = ev.clientX + 16, top = ev.clientY - ttH / 2;
+        if (left + ttW > window.innerWidth  - 12) left = ev.clientX - ttW - 16;
+        if (top  + ttH > window.innerHeight - 12) top  = window.innerHeight - ttH - 12;
+        if (top < 8) top = 8;
+        ttEl.style.left = left + "px";
+        ttEl.style.top  = top  + "px";
+    }
+
+    function attachTooltip(sel) {
+        sel.on("mouseover", function(d) { showTooltip(d); })
+           .on("mousemove", function()  { moveTooltip(d3.event); })
+           .on("mouseout",  function()  { ttEl.style.opacity = "0"; });
+    }
+
+    // ── Chart ────────────────────────────────────────────
+    function lineChartCreate() {
+        d3.select(sectionID).append("svg")
+            .attr("viewBox", "0 0 860 360");
+    }
+
+    function lineChartUpdate(isInitial) {
+        var inp = readInputs();
+        totalArray = computeArray(inp.p, inp.r, inp.t, inp.c, inp.e);
+        updatePanel();
+
+        var series = d3.stack().keys(KEYS)(totalArray);
+
+        var maxT = Math.max(
+            totalArray[totalArray.length - 1].time,
+            savedScenarios.reduce(function(m, sc) { return Math.max(m, sc.t); }, 0)
+        );
+
+        var yMax = d3.max(series, function(s) { return d3.max(s, function(d) { return d[1]; }); });
+        savedScenarios.forEach(function(sc) {
+            var peak = sc.totalArray[sc.totalArray.length - 1].amount;
+            if (peak > yMax) yMax = peak;
+        });
+
+        var x = d3.scaleBand()
+            .domain(d3.range(0, maxT + 1))
+            .range([margin.left, width - margin.right])
+            .padding(PADDING);
+
+        var y = d3.scaleLinear()
+            .domain([0, yMax * 1.05])
+            .rangeRound([height - margin.bottom, margin.top]);
+
+        var colorFn = d3.scaleOrdinal().domain(KEYS)
+            .range(KEYS.map(function(k) { return BAR_COLORS[k]; }));
+
+        var xAxis = function(g) {
+            g.attr("transform", "translate(0," + (height - margin.bottom) + ")")
+             .call(d3.axisBottom(x).tickFormat(d3.format("d")).ticks(Math.min(maxT, 20)).tickSizeOuter(0));
+        };
+
+        var yAxis = function(g) {
+            g.attr("transform", "translate(" + margin.left + ",0)")
+             .call(d3.axisLeft(y).ticks(5).tickFormat(d3.format('$,.3s')))
+             .call(function(g) { g.selectAll(".domain").remove(); });
+        };
+
+        var svg = d3.select(sectionID).select("svg");
+
+        if (isInitial) {
+            var groups = svg.selectAll("g.bar-group")
+                .data(series)
+                .join(function(enter) { return enter.append("g").attr("class", "bar-group"); })
+                .attr("fill", function(d) { return colorFn(d.key); });
+
+            var bars = groups.selectAll("rect").data(function(d) { return d; })
+                .join("rect")
+                .attr("x", function(d) { return x(d.data.time); })
+                .attr("width", x.bandwidth())
+                .attr("y", y(0))
+                .attr("height", 0);
+
+            bars.transition().duration(3000)
+                .attr("y", function(d) { return y(d[1]); })
+                .attr("height", function(d) { return y(d[0]) - y(d[1]); });
+
+            attachTooltip(bars);
+
+            // Count-up hero number
+            var numFmt = d3.format(",d");
+            d3.select("#result").transition().duration(3000)
+                .tween("text", function() {
+                    var el = d3.select(this);
+                    var interp = d3.interpolateNumber(0, yMax);
+                    return function(t) { el.text("$" + numFmt(interp(t))); };
+                });
+
+        } else {
+            svg.selectAll("g.bar-group").remove();
+            var gs = svg.selectAll("g.bar-group").data(series)
+                .enter().append("g").attr("class", "bar-group")
+                .attr("fill", function(d) { return colorFn(d.key); });
+
+            var rects = gs.selectAll("rect").data(function(d) { return d; })
+                .enter().append("rect")
+                .attr("x", function(d) { return x(d.data.time); })
+                .attr("width", x.bandwidth())
+                .attr("y", function(d) { return y(d[1]); })
+                .attr("height", function(d) { return y(d[0]) - y(d[1]); });
+
+            attachTooltip(rects);
+        }
+
+        // Saved scenario lines
+        svg.selectAll(".sc-line").remove();
+        savedScenarios.forEach(function(sc) {
+            var lineGen = d3.line()
+                .x(function(d) { return x(d.time) + x.bandwidth() / 2; })
+                .y(function(d) { return y(d.amount); });
+
+            svg.append("path")
+                .attr("class", "sc-line")
+                .datum(sc.totalArray)
+                .attr("fill", "none")
+                .attr("stroke", sc.color)
+                .attr("stroke-width", 2.5)
+                .attr("stroke-dasharray", "7,4")
+                .attr("d", lineGen);
+
+            var last = sc.totalArray[sc.totalArray.length - 1];
+            svg.append("circle").attr("class", "sc-line")
+                .attr("cx", x(last.time) + x.bandwidth() / 2)
+                .attr("cy", y(last.amount))
+                .attr("r", 4).attr("fill", sc.color);
+        });
+
+        // Structural elements
+        svg.selectAll(".x-axis, .y-axis, .chart-legend, .axisLabel").remove();
+        svg.append("g").call(xAxis).attr("class", "x-axis axis");
+        svg.append("g").call(yAxis).attr("class", "y-axis axis");
+
+        // Bar category legend
+        var revKeys = ['Interest', 'Work Contributions', 'Self Contributions'];
+        var lgG = svg.append("g").attr("class", "chart-legend")
+            .attr("font-family", "sans-serif").attr("font-size", 10).attr("text-anchor", "end")
+            .selectAll("g").data(revKeys).join("g")
+            .attr("transform", function(d, i) {
+                return "translate(" + (margin.left + i * ((width - margin.left - margin.right) / 3.2)) + ",0)";
             });
 
-            nameEl.value = "";
-            renderSavedSection();
-            lineChartUpdate(false);
-        });
+        lgG.append("rect").attr("x", 0).attr("width", 13).attr("height", 13)
+            .attr("fill", function(d) { return BAR_COLORS[d]; });
+        lgG.append("text").attr("x", -5).attr("y", 10).attr("dy", "0.1em")
+            .attr("text-anchor", "end")
+            .text(function(d) { return d; });
 
-        // Allow Enter key in name field to save
-        document.getElementById("scenarioName").addEventListener("keydown", function(e) {
-            if (e.key === "Enter") document.getElementById("saveBtn").click();
+        // Saved scenario line legend
+        if (savedScenarios.length) {
+            var scLeg = svg.append("g").attr("class", "chart-legend")
+                .attr("font-family", "sans-serif").attr("font-size", 10)
+                .attr("transform", "translate(" + margin.left + ",18)");
+
+            savedScenarios.forEach(function(sc, i) {
+                var gx = i * 140;
+                var gg = scLeg.append("g").attr("transform", "translate(" + gx + ",0)");
+                gg.append("line")
+                    .attr("x1", 0).attr("y1", 6).attr("x2", 18).attr("y2", 6)
+                    .attr("stroke", sc.color).attr("stroke-width", 2.5)
+                    .attr("stroke-dasharray", "5,3");
+                gg.append("circle").attr("cx", 18).attr("cy", 6).attr("r", 3).attr("fill", sc.color);
+                gg.append("text").attr("x", 24).attr("y", 10).attr("fill", "#555")
+                    .attr("text-anchor", "start").text(sc.name);
+            });
+        }
+
+        svg.append("text")
+            .attr("transform", "translate(" + (width / 2) + "," + (height + margin.top + 2) + ")")
+            .style("text-anchor", "middle").attr("class", "axisLabel").text("Years");
+    }
+
+    // ── Init ──────────────────────────────────────────────
+    lineChartCreate();
+    lineChartUpdate(true);
+
+    // Live updates
+    var debounceTimer;
+    function scheduleUpdate() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(function() { lineChartUpdate(false); }, 400);
+    }
+    ['p','r','t','c','e'].forEach(function(id) {
+        document.getElementById(id).addEventListener('input', scheduleUpdate);
+    });
+
+    // Save scenario
+    document.getElementById("saveBtn").addEventListener("click", function() {
+        if (savedScenarios.length >= MAX_SAVED) return;
+        var nameEl = document.getElementById("scenarioName");
+        var name   = nameEl.value.trim();
+        if (!name) {
+            nameEl.classList.add("error");
+            nameEl.focus();
+            setTimeout(function() { nameEl.classList.remove("error"); }, 1200);
+            return;
+        }
+        var inp = readInputs();
+        savedScenarios.push({
+            name: name,
+            p: inp.p, r: inp.r, t: inp.t, c: inp.c, e: inp.e,
+            totalArray: computeArray(inp.p, inp.r, inp.t, inp.c, inp.e),
+            color: SC_COLORS[savedScenarios.length]
         });
-    </script>
+        nameEl.value = "";
+        renderSavedSection();
+        lineChartUpdate(false);
+    });
+
+    document.getElementById("scenarioName").addEventListener("keydown", function(e) {
+        if (e.key === "Enter") document.getElementById("saveBtn").click();
+    });
+</script>
 </body>
 
 </html>
