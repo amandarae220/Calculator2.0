@@ -1,0 +1,9 @@
+{
+  "name": "retirement-savings-calculator",
+  "version": "2.0.0",
+  "description": "Interactive compound interest visualizer built with D3.js",
+  "scripts": {
+    "start": "npx serve ."
+  },
+  "license": "MIT"
+}
