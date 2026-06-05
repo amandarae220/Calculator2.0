@@ -5,7 +5,7 @@
 <head>
     <title>Retirement Calculator — Savings Projection Tool</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -1192,8 +1192,8 @@
     }
 
     function attachTooltip(sel) {
-        sel.on("mouseover", function(d) { showTooltip(d); })
-           .on("mousemove", function()  { moveTooltip(d3.event); })
+        sel.on("mouseover", function(event, d) { showTooltip(d); })
+           .on("mousemove", function(event)    { moveTooltip(event); })
            .on("mouseout",  hideTooltip);
     }
 
@@ -1418,7 +1418,7 @@
     function setupBarHighlight(selection) {
         selection
             .style("cursor", "pointer")
-            .on("mouseover.hl", function(d) { highlightBars(d.data.time); })
+            .on("mouseover.hl", function(event, d) { highlightBars(d.data.time); })
             .on("mouseleave.hl", clearBarHighlight);
     }
 
