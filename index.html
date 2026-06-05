@@ -1,445 +1,1789 @@
 <!-- view visualization here: https://amandarae220.github.io/Calculator2.0/ -->
 
-<html>
+<html lang="en">
 
 <head>
-    <title>Retirement Calculator</title>
-    <script src="https://d3js.org/d3.v5.min.js"></script>
-    <link href="https://fonts.googleapis.com/css?family=Oswald" rel="stylesheet">
+    <title>Retirement Calculator — Savings Projection Tool</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
-        .axis,
-        .axisLabel {
-            font: 12px;
+        :root {
+            --brand-primary: #5a38e0;
+            --brand-light:   #8b6ff5;
+            --brand-dark:    #3a1fa0;
+            --brand-accent:  #7657f4;
+            --brand-income:  #1680d4;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        .sr-only {
+            position: absolute; width: 1px; height: 1px;
+            padding: 0; margin: -1px; overflow: hidden;
+            clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+        }
+
+        body {
+            font-family: sans-serif;
+            font-size: 14px;
+            color: #000;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ── App shell ── */
+        #app {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* ══════════════════════════════════════════
+           LEFT PANEL
+        ══════════════════════════════════════════ */
+        #leftPanel {
+            width: 420px;
+            min-width: 320px;
+            flex-shrink: 0;
+            background: linear-gradient(160deg, var(--brand-light) 0%, var(--brand-primary) 55%, var(--brand-dark) 100%);
+            color: #fff;
+            padding: clamp(16px, 3.5vh, 36px) 32px;
+            display: flex;
+            flex-direction: column;
+            gap: clamp(8px, 2vh, 24px);
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Large decorative $ watermark */
+        #leftPanel::before {
+            content: "$";
+            position: absolute;
+            font-family: 'Oswald', sans-serif;
+            font-size: 380px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.05);
+            right: -40px;
+            bottom: -60px;
+            line-height: 1;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        .appTitle {
+            font-family: 'Oswald', sans-serif;
+            font-size: 13px;
+            font-weight: 400;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.55);
+        }
+
+        /* ── Hero metric ── */
+        .metaLabel {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: rgba(255,255,255,0.55);
+            margin-bottom: 6px;
+        }
+
+        #result {
+            font-family: 'Oswald', sans-serif;
+            font-size: clamp(34px, 5.5vh, 54px);
+            font-weight: 700;
+            line-height: 1;
+            letter-spacing: -1px;
+            color: #fff;
+        }
+
+        #heroYears {
+            font-size: 12px;
+            color: rgba(255,255,255,0.75);
+            margin-top: 8px;
+        }
+
+        /* ── Secondary metrics ── */
+        #secondaryMetrics {
+            display: flex;
+        }
+
+        .secMetric { flex: 1; }
+
+        .secMetric + .secMetric {
+            border-left: 1px solid rgba(255,255,255,0.15);
+            padding-left: 20px;
+            margin-left: 4px;
+        }
+
+        .secVal {
+            font-family: 'Oswald', sans-serif;
+            font-size: clamp(15px, 2.5vh, 22px);
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .secLabel {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: rgba(255,255,255,0.75);
+            margin-top: 4px;
+        }
+
+        /* ── Divider ── */
+        .panelDivider {
+            border: none;
+            border-top: 1px solid rgba(255,255,255,0.14);
+        }
+
+        /* ── Inputs ── */
+        #inputsGrid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: clamp(8px, 1.5vh, 14px);
+            margin-bottom: clamp(16px, 3vh, 28px);
+        }
+
+        #inputsGrid .inputGroup.full {
+            grid-column: 1 / -1;
+        }
+
+        .inputGroup {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .inputGroup label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: rgba(255,255,255,0.55);
+            margin-bottom: 6px;
+        }
+
+        .inputGroup input {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 6px;
+            padding: 9px 11px;
+            font-size: 14px;
+            color: #fff;
+            width: 100%;
+            transition: background 0.15s, border-color 0.15s;
+            /* Remove browser number arrows */
+            -moz-appearance: textfield;
+            appearance: textfield;
+        }
+
+        .inputGroup input::-webkit-outer-spin-button,
+        .inputGroup input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+        .inputGroup input:focus {
+            outline: none;
+            background: rgba(255,255,255,0.16);
+            border-color: rgba(255,255,255,0.45);
+        }
+
+        .inputGroup input::placeholder { color: rgba(255,255,255,0.6); }
+
+        /* ── Required field marker ── */
+        .reqMark {
+            color: rgba(255,255,255,0.85);
+            font-size: 9px;
+            vertical-align: middle;
+        }
+
+        /* ── Input error state (purple panel) ── */
+        .inputGroup input.invalid,
+        .inputGroup input.invalid:focus {
+            border-color: rgba(255, 110, 110, 0.9);
+            background: rgba(255, 80, 80, 0.15);
+        }
+
+        .inputError {
+            font-size: 10px;
+            color: rgba(255, 140, 140, 1);
+            margin-top: 3px;
+            line-height: 1.3;
+        }
+
+        /* ── Error state overrides inside the white mobile sheet ── */
+        #mobileSheetContent .reqMark { color: #bbb; }
+        #mobileSheetContent .inputGroup input.invalid,
+        #mobileSheetContent .inputGroup input.invalid:focus {
+            border-color: #e53935;
+            background: rgba(229, 57, 53, 0.06);
+        }
+        #mobileSheetContent .inputError { color: #e53935; }
+
+        /* ── Save bar ── */
+        #saveBar {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        #scenarioName {
+            flex: 1;
+            background: rgba(255,255,255,0.1);
+            border: 1.5px solid rgba(255,255,255,0.18);
+            border-radius: 6px;
+            padding: 9px 11px;
+            font-size: 13px;
+            color: #fff;
+            transition: border-color 0.15s, background 0.15s;
+        }
+
+        #scenarioName::placeholder { color: rgba(255,255,255,0.6); }
+        #scenarioName:focus { outline: none; background: rgba(255,255,255,0.16); border-color: rgba(255,255,255,0.45); }
+        #scenarioName.error { border-color: #ff6b6b; }
+
+        #saveBtn {
+            font-family: sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 9px 14px;
+            border: none;
+            border-radius: 6px;
+            background: #fff;
+            color: var(--brand-primary);
+            cursor: pointer;
+            white-space: nowrap;
+            transition: opacity 0.15s;
+            flex-shrink: 0;
+        }
+
+        #saveBtn:hover:not(:disabled) { opacity: 0.88; }
+        #saveBtn:disabled { background: rgba(255,255,255,0.25); color: rgba(255,255,255,0.5); cursor: not-allowed; }
+
+        /* ══════════════════════════════════════════
+           RIGHT PANEL
+        ══════════════════════════════════════════ */
+        #rightPanel {
+            flex: 1;
+            background: #fcfcff;
+            padding: 36px 40px 32px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            min-width: 0;
+        }
+
+        #chartWrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            min-height: 0;
+        }
+
+        #chart {
+            width: 100%;
+        }
+
+        #chart svg {
+            width: 100%;
+            height: auto;
+            display: block;
+            overflow: visible;
+        }
+
+        /* ── Key Insights ── */
+        #insightsSection {
+            padding-top: 24px;
+            margin-top: 4px;
+        }
+
+        .insightsSectionTitle {
+            font-family: 'Oswald', sans-serif;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 14px;
+        }
+
+        #insightCards {
+            display: flex;
+            align-items: stretch;
+            gap: 12px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+            scrollbar-width: none;
+        }
+
+        #insightCards::-webkit-scrollbar { display: none; }
+
+        .insightCard {
+            flex: 0 0 auto;
+            width: 156px;
+            display: flex;
+            flex-direction: column;
+            background: #f4f2ff;
+            border-radius: 12px;
+            border-left: 3px solid var(--brand-accent);
+            padding: 14px 14px 14px 13px;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.45s ease, transform 0.45s ease;
+        }
+
+        .insightCard.ic-income {
+            background: #f0f8ff;
+            border-left-color: var(--brand-income);
+        }
+
+        .insightCard:focus-visible {
+            outline: 2px solid var(--brand-accent);
+            outline-offset: 2px;
+        }
+
+        .insightCard.ic-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .ic-tag {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--brand-accent);
+            margin-bottom: 8px;
+        }
+
+        .ic-num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--brand-accent);
+            color: #fff;
+            font-size: 8px;
+            font-weight: 700;
+            letter-spacing: 0;
+        }
+
+        .ic-income .ic-tag { color: var(--brand-income); }
+
+        .ic-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #1a1a2e;
+            line-height: 1.2;
+            margin-bottom: 5px;
+        }
+
+        .ic-value {
+            font-size: 19px;
+            font-weight: 800;
+            color: #1a1a2e;
+            line-height: 1.1;
+            margin-bottom: 7px;
+        }
+
+        .ic-unit {
+            font-size: 12px;
+            font-weight: 500;
+            color: #888;
+        }
+
+        .ic-label {
+            font-size: 10px;
+            color: #555;
+            line-height: 1.4;
+            margin-top: auto;
+            padding-top: 6px;
+        }
+
+        /* ── Saved scenarios ── */
+        #savedSection {
+            display: none;
+            border-top: 1px solid #ebebeb;
+            padding-top: 28px;
+            margin-top: 8px;
+        }
+
+        .savedSectionHeader {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .savedSectionTitle {
+            font-family: 'Oswald', sans-serif;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .savedSectionSub {
+            font-size: 12px;
+            color: #999;
+        }
+
+        #savedCards {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        .savedCard {
+            flex: 1;
+            min-width: 160px;
+            background: #fafafa;
+            border-radius: 10px;
+            border-top: 3px solid #ddd;
+            padding: 16px;
+        }
+
+        .savedCardHeader {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .savedCardName {
+            font-weight: 700;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .scDot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .deleteBtn {
+            background: none;
+            border: none;
+            color: #ccc;
+            cursor: pointer;
+            font-size: 18px;
+            line-height: 1;
+            padding: 8px;
+            margin: -8px;
+            min-width: 44px;
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .deleteBtn:hover { color: #888; }
+
+        .savedCardPills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-bottom: 14px;
+        }
+
+        .pill {
+            background: #ebebeb;
+            border-radius: 3px;
+            padding: 3px 7px;
+            font-size: 11px;
+            color: #555;
+        }
+
+        .savedCardMetrics {
+            display: flex;
+            gap: 4px;
+        }
+
+        .savedMetric {
+            flex: 1;
+            text-align: center;
+        }
+
+        .savedMetricVal {
+            font-family: 'Oswald', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .savedMetricLabel {
+            font-size: 9px;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-top: 3px;
+        }
+
+        /* ── Axis / chart text ── */
+        .axis, .axisLabel {
             font-family: sans-serif;
             font-size: 10px;
         }
 
-        body {
-            margin-right: 7%;
-            background-color: #ffffff;
-            font-family: sans-serif;
-            height: 100%;
-            font-size: 14px;
+        /* ── Tooltip ── */
+        #tooltip {
+            position: fixed;
+            pointer-events: none;
+            background: #16213e;
+            color: #fff;
+            border-radius: 10px;
+            padding: 14px 18px;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.12s;
+            min-width: 210px;
+            box-shadow: 0 8px 28px rgba(0,0,0,0.3);
+            z-index: 100;
         }
 
-        body {
-            color: #000000;
-        }
-
-        .title {
+        .tt-year {
             font-family: 'Oswald', sans-serif;
-            font-size: 30px;
-            text-align: center;
-            margin-top: 25px;
-            margin-bottom: 20px;
-            color: #000000;
+            font-size: 17px;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.15);
         }
 
-        .links {
-            font-family: sans-serif;
-            font-variant: small-caps;
-            margin: 0 auto;
-            font-size: 100%;
-            text-align: center;
-            align-self: center;
-            text-decoration: none;
-            padding-left: 0px;
-            padding: 0px 10px;
-            word-wrap: normal;
-            display: block;
-        }
-
-        .charts {
-            display: inline-block;
-            width: 90%;
-        }
-
-        label,
-        input {
-            display: table-cell;
-            color: #868B8E;
-            font-family: sans-serif;
-            font-size: 14px;
-        }
-
-        #resultTitle {
-            display: inline-block;
-            text-align: center;
-            font-family: sans-serif;
-            font-size: 14px;
-            color: #000000;
-            margin: 3px 0px;
-        }
-
-        .button1 {
-            font-family: sans-serif;
-            font-size: 14px;
-            display: inline-block;
-            padding: 0.5em 2em;
-            margin: 0 0.2em 0.2em 0;
-            border: none;
-            border-radius: 5px;
-            box-sizing: border-box;
-            text-decoration: none;
-            font-weight: 300;
-            color: #FFFFFF;
-            background-color: #1657e2;
-            text-align: center;
-            transition: all 0.2s;
-        }
-
-        label {
-            text-align: right;
-            color: #000000;
-            padding-right: 5px;
-        }
-
-        .entryrow {
-            display: table-row;
-            text-align: center;
-        }
-
-        #nonGraphContainer {
+        .tt-row {
             display: flex;
             justify-content: space-between;
-            padding: 2% 10%;
+            align-items: center;
+            gap: 20px;
+            padding: 3px 0;
+            color: rgba(255,255,255,0.8);
         }
 
-        #resultContainer {
-            width: 50%;
+        .tt-row.tt-total {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255,255,255,0.15);
+            color: #fff;
+            font-weight: 700;
+        }
+
+        .tt-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+            flex-shrink: 0;
+        }
+
+        .tt-label { display: flex; align-items: center; }
+
+        /* ══════════════════════════════════════════
+           MOBILE BOTTOM SHEET UI
+        ══════════════════════════════════════════ */
+        #mobileConfigBtn {
+            display: none;
+            position: fixed;
+            bottom: 24px;
+            right: 20px;
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: var(--brand-primary);
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 20px rgba(90, 56, 224, 0.5);
+            z-index: 200;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+
+        #mobileConfigBtn:active {
+            transform: scale(0.92);
+            box-shadow: 0 2px 10px rgba(90, 56, 224, 0.4);
+        }
+
+        #mobileOverlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            z-index: 300;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s;
+        }
+
+        #mobileOverlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #mobileSheet {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border-radius: 20px 20px 0 0;
+            z-index: 400;
+            transform: translateY(110%);
+            transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+            max-height: 85vh;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            gap: 8px;
+            box-shadow: 0 -4px 32px rgba(0, 0, 0, 0.18);
+            pointer-events: none;
         }
 
-        #resultLabel,
-        #result {
-            font-family: 'Oswald', sans-serif;
-            font-size: 30px;
-            color: #000000;
-            display: inline;
+        #mobileSheet.open {
+            transform: translateY(0);
+            pointer-events: auto;
         }
 
-        #container {
-            width: 50%;
-            font-size: 100%;
+        .sheetHandle {
+            width: 36px;
+            height: 4px;
+            background: #ddd;
+            border-radius: 2px;
+            margin: 12px auto 0;
+            flex-shrink: 0;
+        }
+
+        .sheetHeader {
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: space-between;
+            padding: 14px 20px 12px;
+            flex-shrink: 0;
+            border-bottom: 1px solid #f0f0f0;
         }
 
-        #option {
-            font-family: 'Open Sans';
-            font-size: 30px;
-            color: #000000;
-            display: block;
-            margin: 0 auto;
-            text-align: center;
-            align-self: center;
+        .sheetTitle {
+            font-family: 'Oswald', sans-serif;
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a1a;
         }
 
-        .button1:hover {
-            background-color: #5292ed;
-        }
-
-        #inputs {
-            display: table;
-            border-spacing: 4px 6px;
-        }
-
-        .chart {
+        #sheetDoneBtn {
+            background: var(--brand-primary);
+            color: #fff;
             border: none;
-            border-radius: 5px;
-            box-sizing: border-box;
-            background-color: #f7f7f7;
-            margin: 0% 10%;
-            padding: 2% 2%;
+            border-radius: 20px;
+            padding: 7px 18px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: sans-serif;
+        }
+
+        #mobileSheetContent {
+            overflow-y: auto;
+            padding: 20px;
+            flex: 1;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Light-theme overrides for inputs inside the white sheet */
+        #mobileSheetContent .inputGroup label { color: #555; }
+
+        #mobileSheetContent .inputGroup input {
+            background: #f4f4f6;
+            border-color: #e0e0e0;
+            color: #1a1a1a;
+            font-size: 16px;
+            padding: 11px;
+        }
+
+        #mobileSheetContent .inputGroup input::placeholder { color: #bbb; }
+
+        #mobileSheetContent .inputGroup input:focus {
+            background: #fff;
+            border-color: var(--brand-primary);
+            outline: none;
+        }
+
+        #mobileSheetContent .panelDivider { border-top-color: #ebebeb; }
+
+        #mobileSheetContent #scenarioName {
+            background: #f4f4f6;
+            border-color: #e0e0e0;
+            color: #1a1a1a;
+            font-size: 16px;
+        }
+
+        #mobileSheetContent #scenarioName::placeholder { color: #bbb; }
+
+        #mobileSheetContent #scenarioName:focus {
+            background: #fff;
+            border-color: var(--brand-primary);
+            outline: none;
+        }
+
+        #mobileSheetContent #saveBtn {
+            background: var(--brand-primary);
+            color: #fff;
+        }
+
+        /* ══════════════════════════════════════════
+           MOBILE  (≤ 720px)
+        ══════════════════════════════════════════ */
+        @media (max-width: 720px) {
+            #app { flex-direction: column; height: 100vh; }
+
+            /* ── Left panel: compact metric strip ── */
+            #leftPanel {
+                width: 100%;
+                min-width: 0;
+                flex-shrink: 0;
+                padding: 20px 20px 16px;
+                gap: 12px;
+                overflow: hidden;
+            }
+
+            #leftPanel::before { display: none; }
+
+            #result { font-size: clamp(32px, 10vw, 52px); }
+
+            /* Hide inputs divider; inputs move to sheet */
+            #inputsDivider { display: none; }
+
+            /* ── Right panel: scrollable, chart prominent ── */
+            #rightPanel {
+                flex: 1;
+                min-height: 0;
+                padding: 10px 16px 88px;
+                overflow-y: auto;
+            }
+
+            #chartWrapper {
+                flex: none;
+                min-height: 52vw;
+                align-items: stretch;
+                margin-top: 16px;
+            }
+
+            /* Saved scenarios: single column on mobile */
+            #savedSection { padding-top: 16px; margin-top: 4px; }
+            #savedCards { flex-direction: column; }
+            .savedCard { min-width: 0; flex: none; }
+
+            /* Show floating configure button */
+            #mobileConfigBtn { display: flex; }
+
+            /* ── Chart text: 18 SVG units ≈ 12–14px actual across common phones
+               (500-unit viewBox × ~0.69–0.80 device scale), meeting WCAG 1.4.4
+               and Section 508 minimum legibility for data visualization labels ── */
+            .axis, .axisLabel { font-size: 18px; }
+
+            /* ── Tooltip ── */
+            #tooltip { min-width: 170px; padding: 10px 14px; font-size: 11px; }
+            .tt-year { font-size: 14px; margin-bottom: 7px; padding-bottom: 6px; }
+        }
+
+        /* ── Very small screens: single-column inputs in sheet ── */
+        @media (max-width: 400px) {
+            #inputsGrid { grid-template-columns: 1fr; }
+            #inputsGrid .inputGroup.full { grid-column: 1; }
+        }
+
+        /* ── Reduced motion: disable all decorative animations ── */
+        @media (prefers-reduced-motion: reduce) {
+            .insightCard { transition: none; opacity: 1; transform: none; }
+            .insightCard.ic-visible { opacity: 1; transform: none; }
         }
     </style>
 </head>
 
 <body>
-    <p class="title">Retirement Calculator</p>
-    <div id="nonGraphContainer">
-        <div id="resultContainer">
-            <div style="display:flex;align-items:baseline;">
-                <div id="resultLabel">$</div>
-                <div id="result"></div>
+<div id="app">
+
+    <!-- ══ LEFT PANEL ══ -->
+    <aside id="leftPanel" aria-label="Calculator inputs and summary">
+        <h1 class="appTitle">Retirement Calculator</h1>
+
+        <section id="hero" aria-label="Total savings summary" aria-live="polite" aria-atomic="true">
+            <div class="metaLabel">Total Savings</div>
+            <div id="result" role="status"></div>
+            <div id="heroYears" class="heroYears"></div>
+        </section>
+
+        <section id="secondaryMetrics">
+            <div class="secMetric">
+                <div id="contributed" class="secVal"></div>
+                <div class="secLabel">Contributed</div>
             </div>
-            <p id="resultTitle">Total Savings</p>
-            <div id="option">
-                <input name="updateButton" class="button1" type="button" value="Calculate" onclick="clickToUpdate()" />
+            <div class="secMetric">
+                <div id="interest" class="secVal"></div>
+                <div class="secLabel">Interest Earned</div>
             </div>
-        </div>
-        <div id="container">
-            <div id="inputs">
-                <div class="entryrow"><label>Starting Amount: </label><input id="p" value="25000"></div>
-                <div class="entryrow"><label>Rate (%): </label><input id="r" value="8"></div>
-                <div class="entryrow"><label>No. of Years: </label><input id="t" value="20"></div>
-                <div class="entryrow"><label>Self Contribution (Yearly): </label><input id="c" value="15000"></div>
-                <div class="entryrow"><label>Employer Contribution (Yearly): </label><input id="e" value="7000"></div>
+        </section>
+
+        <hr class="panelDivider" id="inputsDivider">
+
+        <div id="inputsSection">
+        <div id="inputsGrid">
+            <div class="inputGroup">
+                <label for="p">Starting Amount <span class="reqMark" aria-label="required">*</span></label>
+                <input id="p" type="number" step="1" value="25000" autocomplete="off" aria-required="true" aria-describedby="p-error">
+                <div class="inputError" id="p-error" role="alert" aria-live="assertive"></div>
+            </div>
+            <div class="inputGroup">
+                <label for="r">Rate (%) <span class="reqMark" aria-label="required">*</span></label>
+                <input id="r" type="number" step="any" value="8" autocomplete="off" aria-required="true" aria-describedby="r-error">
+                <div class="inputError" id="r-error" role="alert" aria-live="assertive"></div>
+            </div>
+            <div class="inputGroup">
+                <label for="t">Years <span class="reqMark" aria-label="required">*</span></label>
+                <input id="t" type="number" step="1" value="20" autocomplete="off" aria-required="true" aria-describedby="t-error">
+                <div class="inputError" id="t-error" role="alert" aria-live="assertive"></div>
+            </div>
+            <div class="inputGroup">
+                <label for="c">Self Contribution (yr)</label>
+                <input id="c" type="number" step="1" value="15000" autocomplete="off" aria-describedby="c-error">
+                <div class="inputError" id="c-error" role="alert" aria-live="assertive"></div>
+            </div>
+            <div class="inputGroup full">
+                <label for="e">Employer Contribution (yr)</label>
+                <input id="e" type="number" step="1" value="7000" autocomplete="off" aria-describedby="e-error">
+                <div class="inputError" id="e-error" role="alert" aria-live="assertive"></div>
+            </div>
+            <div class="inputGroup full">
+                <label for="s">Yearly Spend</label>
+                <input id="s" type="number" step="1" autocomplete="off" placeholder="For Coast FI" aria-describedby="s-error">
+                <div class="inputError" id="s-error" role="alert" aria-live="assertive"></div>
             </div>
         </div>
 
+        <hr class="panelDivider">
+
+        <div id="saveBar">
+            <label for="scenarioName" class="sr-only">Scenario name (30 character limit)</label>
+            <input id="scenarioName" type="text" maxlength="30" placeholder="Name this scenario…" aria-describedby="saveBtn" autocomplete="off">
+            <button id="saveBtn">Save</button>
+        </div>
+        </div><!-- /#inputsSection -->
+    </aside>
+
+    <!-- ══ RIGHT PANEL ══ -->
+    <main id="rightPanel">
+        <div id="chartWrapper">
+            <div id="chart"></div>
+        </div>
+
+        <div id="insightsSection">
+            <div class="insightsSectionTitle">Key Insights</div>
+            <div id="insightCards" role="list" aria-label="Key insights about your retirement projection" aria-live="polite"></div>
+        </div>
+
+        <div id="savedSection">
+            <div class="savedSectionHeader">
+                <span class="savedSectionTitle">Saved Scenarios</span>
+                <span class="savedSectionSub" id="savedCount" aria-live="polite"></span>
+            </div>
+            <div id="savedCards"></div>
+        </div>
+    </main>
+
+</div>
+
+<!-- Mobile floating configure button -->
+<button id="mobileConfigBtn" aria-label="Configure inputs">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+    </svg>
+</button>
+
+<!-- Mobile overlay -->
+<div id="mobileOverlay"></div>
+
+<!-- Mobile bottom sheet -->
+<div id="mobileSheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitleText">
+    <div class="sheetHandle" aria-hidden="true"></div>
+    <div class="sheetHeader">
+        <span class="sheetTitle" id="sheetTitleText">Configure</span>
+        <button id="sheetDoneBtn">Done</button>
     </div>
-    </br>
-    <div id="chart" class="chart" style="text-align: center"></div>
-    <script>
+    <div id="mobileSheetContent"></div>
+</div>
 
-        let transition = "initial";
-        let keys = ['Self Contributions', 'Work Contributions', 'Interest']
-        const reversedKeys = ['Interest', 'Work Contributions', 'Self Contributions']
-        let colorList1 = ["#7657f4", "#BFB5FF", "#68d0fa"]
-        let colorList2 = ["#68d0fa", "#BFB5FF", "#7657f4"]
+<!-- Tooltip -->
+<div id="tooltip" aria-hidden="true">
+    <div class="tt-year" id="ttYear"></div>
+    <div class="tt-row">
+        <span class="tt-label"><span class="tt-dot" style="background:#68d0fa"></span>Interest</span>
+        <span id="ttInterest"></span>
+    </div>
+    <div class="tt-row">
+        <span class="tt-label"><span class="tt-dot" style="background:#BFB5FF"></span>Work Contributions</span>
+        <span id="ttWork"></span>
+    </div>
+    <div class="tt-row">
+        <span class="tt-label"><span class="tt-dot" style="background:#7657f4"></span>Self Contributions</span>
+        <span id="ttSelf"></span>
+    </div>
+    <div class="tt-row tt-total">
+        <span>Total</span>
+        <span id="ttTotal"></span>
+    </div>
+</div>
 
-        // light purple: #BFB5FF
-        // dark purple: ?
+<script>
+    var KEYS       = ['Self Contributions', 'Work Contributions', 'Interest'];
+    var BAR_COLORS = { 'Self Contributions': '#7657f4', 'Work Contributions': '#BFB5FF', 'Interest': '#68d0fa' };
+    var SC_COLORS  = ['#e8774a', '#2baa6a', '#1680d4', '#c94fa0'];
+    var MAX_SAVED  = 4;
 
+    // Chart layout constants
+    var Y_MAX_PAD    = 1.05;  // headroom above the tallest bar
+    var LG_COL_DIV   = 3.2;   // divides chart width into legend columns (>3 adds breathing room)
+    var SC_LEG_STEP  = 140;   // horizontal gap between saved-scenario legend entries
+    var SC_LEG_Y     = 18;    // y-offset of saved-scenario legend row below the bar legend
 
-        let padding = .15
-        let sectionID = "#chart"
-        let prev = 0
-        let legendWidth = 100
+    // Cached once so all callers share the same MediaQueryList instance
+    var PREFERS_REDUCED_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)");
 
-        var margin = { top: 20, right: 50, bottom: 10, left: 50 };
-        var width = 960 - margin.left - margin.right,
-            height = 350 - margin.top - margin.bottom;
+    var sectionID = "#chart";
+    var PADDING   = 0.15;
+    var margin    = { top: 30, right: 30, bottom: 10, left: 55 };
+    var width     = 860;
+    var height    = 360;
 
-        function calculateBasedOnInputs() {
-            p = document.getElementById("p").value; // starting amount
-            t = document.getElementById("t").value; // no. of years
-            r = document.getElementById("r").value; // interest rate
-            c = document.getElementById("c").value; // self contribution amt
-            e = document.getElementById("e").value; // employer contribution amt
-            result = document.getElementById("result");
+    function isMobile() { return window.innerWidth <= 720; }
 
-            p = +p;
-            n = 1;
-            t = +t;
-            r = +r;
-            c = +c;
-            e = +e;
-
-            let selfContributionsBalance = p;
-            let workContributionsBalance = 0;
-            let interestBalance = 0;
-            let ce = c + e;
-
-            // creating a nested array dictated by inputs:
-            totalArray = [];
-            for (i = 0; i <= t; i++) {
-
-                baseformula = Math.pow((1 + (r / (n * 100))), n * i)
-                CIP = (p * baseformula);
-                FV = ce * ((baseformula - 1) / (r / (n * 100)))
-                amount = CIP + FV
-                interestBalance = amount - selfContributionsBalance - workContributionsBalance;
-                totalArray.push({
-                    time: i,
-                    amount: amount,
-                    'Self Contributions': selfContributionsBalance,
-                    'Work Contributions': workContributionsBalance,
-                    Interest: interestBalance
-                })
-                selfContributionsBalance = selfContributionsBalance + c;
-                workContributionsBalance = workContributionsBalance + e;
-            }
-            var max_amount = Math.round(d3.max(totalArray, d => d.amount));
-            function numberWithCommas(x) {
-                return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-            }
-            result.innerHTML = "$" + numberWithCommas(max_amount);
+    function updateChartDims() {
+        if (isMobile()) {
+            margin = { top: 20, right: 16, bottom: 10, left: 64 };
+            width  = 500;
+            height = 360;
+        } else {
+            margin = { top: 30, right: 30, bottom: 10, left: 55 };
+            width  = 860;
+            height = 360;
         }
-        /*
-                // create the initial svg
-                function lineChartCreate(sectionID, height, width, margin) {
-                    var svg = d3.select(sectionID)
-                        .append('svg')
-                        .attr("height", height + margin.top + margin.bottom + legendWidth)
-                        .attr("width", width + margin.left + margin.right);
+    }
+
+    var sheetOpener = null;
+
+    function openSheet() {
+        sheetOpener = document.activeElement;
+        document.getElementById("mobileOverlay").classList.add("visible");
+        document.getElementById("mobileSheet").classList.add("open");
+        // Move focus to first focusable element in the sheet
+        var sheet = document.getElementById("mobileSheet");
+        var focusable = sheet.querySelectorAll('input, button, [tabindex]:not([tabindex="-1"])');
+        if (focusable.length) setTimeout(function() { focusable[0].focus(); }, 50);
+    }
+
+    function closeSheet() {
+        document.getElementById("mobileOverlay").classList.remove("visible");
+        document.getElementById("mobileSheet").classList.remove("open");
+        // Return focus to the element that opened the sheet
+        if (sheetOpener) { sheetOpener.focus(); sheetOpener = null; }
+    }
+
+    // Escape key closes sheet; Tab key is trapped inside sheet while open
+    document.addEventListener("keydown", function(e) {
+        var sheet = document.getElementById("mobileSheet");
+        if (!sheet.classList.contains("open")) return;
+        if (e.key === "Escape") { closeSheet(); return; }
+        if (e.key === "Tab") {
+            var focusable = Array.prototype.slice.call(
+                sheet.querySelectorAll('input, button, [tabindex]:not([tabindex="-1"])')
+            ).filter(function(el) { return !el.disabled; });
+            if (!focusable.length) return;
+            var first = focusable[0], last = focusable[focusable.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault(); last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault(); first.focus();
+            }
+        }
+    });
+
+    function setupMobileInputs() {
+        var section      = document.getElementById("inputsSection");
+        var sheetContent = document.getElementById("mobileSheetContent");
+        var leftPanel    = document.getElementById("leftPanel");
+        if (isMobile()) {
+            if (section.parentNode !== sheetContent) sheetContent.appendChild(section);
+        } else {
+            if (section.parentNode !== leftPanel) {
+                leftPanel.appendChild(section);
+                closeSheet();
+            }
+        }
+    }
+
+    // Returns bar grouping interval based on total years (mobile only)
+    function getMobileGroupSize(maxYears) {
+        if (!isMobile() || maxYears < 10) return 1;
+        if (maxYears < 20) return 3;
+        if (maxYears < 35) return 4;
+        return 5;
+    }
+
+    // Builds evenly-spaced time checkpoints, always including year 0 and maxT
+    function buildDisplayTimes(maxT, step) {
+        var times = [0];
+        for (var i = step; i < maxT; i += step) { times.push(i); }
+        if (times[times.length - 1] !== maxT) times.push(maxT);
+        return times;
+    }
+
+    var totalArray      = [];
+    var savedScenarios  = [];
+    var displayTimesCache = [];
+    var ttEl           = document.getElementById("tooltip");
+
+    // ── Formatting ──────────────────────────────────────
+    function fmtDollar(v) {
+        return "$" + Math.round(Math.abs(v)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
+
+    function fmtCompact(v) {
+        v = Math.round(Math.abs(v));
+        if (v >= 1000000) return "$" + (v / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
+        if (v >= 1000)    return "$" + Math.round(v / 1000) + "k";
+        return "$" + v;
+    }
+
+    // ── Calculation ─────────────────────────────────────
+    function computeArray(p, r, t, c, e) {
+        var n = 1, ce = c + e, selfBal = p, workBal = 0, arr = [];
+        for (var i = 0; i <= t; i++) {
+            var base   = Math.pow(1 + r / (n * 100), n * i);
+            var amount = p * base + (r > 0 ? ce * ((base - 1) / (r / (n * 100))) : ce * i);
+            arr.push({
+                time: i, amount: amount,
+                'Self Contributions': selfBal,
+                'Work Contributions': workBal,
+                Interest: amount - selfBal - workBal
+            });
+            selfBal += c;
+            workBal += e;
+        }
+        return arr;
+    }
+
+    function readInputs() {
+        return {
+            p: +document.getElementById("p").value,
+            r: +document.getElementById("r").value,
+            t: +document.getElementById("t").value,
+            c: +document.getElementById("c").value,
+            e: +document.getElementById("e").value,
+            s: +document.getElementById("s").value
+        };
+    }
+
+    // ── Left panel metrics ───────────────────────────────
+    function updatePanel() {
+        var inp  = readInputs();
+        var last = totalArray[totalArray.length - 1];
+        var sav  = Math.round(last.amount);
+        var con  = Math.round(inp.p + (inp.c + inp.e) * inp.t);
+        var int_ = sav - con;
+
+        document.getElementById("result").textContent      = fmtDollar(sav);
+        document.getElementById("contributed").textContent = fmtDollar(con);
+        document.getElementById("interest").textContent    = fmtDollar(Math.max(0, int_));
+        document.getElementById("heroYears").textContent   =
+            "after " + inp.t + " year" + (inp.t === 1 ? "" : "s");
+    }
+
+    // ── Saved scenarios ──────────────────────────────────
+    function renderSavedSection() {
+        var section   = document.getElementById("savedSection");
+        var container = document.getElementById("savedCards");
+
+        if (savedScenarios.length === 0) {
+            section.style.display = "none";
+            updateSaveBtn();
+            return;
+        }
+
+        section.style.display = "block";
+        document.getElementById("savedCount").textContent =
+            savedScenarios.length + " of " + MAX_SAVED;
+        updateSaveBtn();
+
+        container.innerHTML = "";
+        savedScenarios.forEach(function(sc, idx) {
+            var sav  = Math.round(sc.totalArray[sc.totalArray.length - 1].amount);
+            var con  = Math.round(sc.p + (sc.c + sc.e) * sc.t);
+            var int_ = Math.max(0, sav - con);
+
+            var card = document.createElement("div");
+            card.className = "savedCard";
+            card.style.borderTopColor = sc.color;
+            card.innerHTML =
+                '<div class="savedCardHeader">' +
+                    '<span class="savedCardName">' +
+                        '<span class="scDot" style="background:' + sc.color + '"></span>' +
+                        escHtml(sc.name) +
+                    '</span>' +
+                    '<button class="deleteBtn" data-idx="' + idx + '" aria-label="Delete scenario ' + escHtml(sc.name) + '">×</button>' +
+                '</div>' +
+                '<div class="savedCardPills">' +
+                    '<span class="pill">' + fmtCompact(sc.p) + ' start</span>' +
+                    '<span class="pill">' + sc.r + '% rate</span>' +
+                    '<span class="pill">' + sc.t + ' yrs</span>' +
+                    '<span class="pill">Self ' + fmtCompact(sc.c) + '</span>' +
+                    '<span class="pill">Employer ' + fmtCompact(sc.e) + '</span>' +
+                '</div>' +
+                '<div class="savedCardMetrics">' +
+                    metric(fmtDollar(sav),  "Total") +
+                    metric(fmtDollar(con),  "Contributed") +
+                    metric(fmtDollar(int_), "Interest") +
+                '</div>';
+            container.appendChild(card);
+        });
+
+        container.querySelectorAll(".deleteBtn").forEach(function(btn) {
+            btn.addEventListener("click", function() {
+                savedScenarios.splice(+this.dataset.idx, 1);
+                savedScenarios.forEach(function(sc, i) { sc.color = SC_COLORS[i]; });
+                renderSavedSection();
+                lineChartUpdate(false);
+            });
+        });
+    }
+
+    function metric(val, label) {
+        return '<div class="savedMetric">' +
+            '<div class="savedMetricVal">' + val + '</div>' +
+            '<div class="savedMetricLabel">' + label + '</div>' +
+        '</div>';
+    }
+
+    function escHtml(s) {
+        return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
+
+    // ── Tooltip ──────────────────────────────────────────
+    function showTooltip(d) {
+        var pt = d.data;
+        document.getElementById("ttYear").textContent     = "Year " + pt.time;
+        document.getElementById("ttSelf").textContent     = fmtDollar(pt['Self Contributions']);
+        document.getElementById("ttWork").textContent     = fmtDollar(pt['Work Contributions']);
+        document.getElementById("ttInterest").textContent = fmtDollar(pt.Interest);
+        document.getElementById("ttTotal").textContent    = fmtDollar(pt.amount);
+        ttEl.style.opacity = "1";
+        ttEl.setAttribute("aria-hidden", "false");
+    }
+
+    function hideTooltip() {
+        ttEl.style.opacity = "0";
+        ttEl.setAttribute("aria-hidden", "true");
+    }
+
+    function moveTooltip(ev) {
+        var ttW = ttEl.offsetWidth || 220, ttH = ttEl.offsetHeight || 140;
+        var left = ev.clientX + 16, top = ev.clientY - ttH / 2;
+        if (left + ttW > window.innerWidth  - 12) left = ev.clientX - ttW - 16;
+        if (top  + ttH > window.innerHeight - 12) top  = window.innerHeight - ttH - 12;
+        if (top < 8) top = 8;
+        ttEl.style.left = left + "px";
+        ttEl.style.top  = top  + "px";
+    }
+
+    function attachTooltip(sel) {
+        sel.on("mouseover", function(event, d) { showTooltip(d); })
+           .on("mousemove", function(event)    { moveTooltip(event); })
+           .on("mouseout",  hideTooltip);
+    }
+
+    // ── Validation ───────────────────────────────────────
+    var RULES = {
+        p: { required: true,  integer: true,  min: 0, max: 1000000,
+             msgs: { required: 'Required', range: 'Between $0 and $1,000,000', integer: 'Whole numbers only' } },
+        r: { required: true,  integer: false, min: 0, max: 20,
+             msgs: { required: 'Required', range: 'Between 0% and 20%' } },
+        t: { required: true,  integer: true,  min: 1, max: 50,
+             msgs: { required: 'Required', range: 'Between 1 and 50 years', integer: 'Whole numbers only' } },
+        c: { required: false, integer: true,  min: 0, max: 100000,
+             msgs: { range: 'Between $0 and $100,000', integer: 'Whole numbers only' } },
+        e: { required: false, integer: true,  min: 0, max: 100000,
+             msgs: { range: 'Between $0 and $100,000', integer: 'Whole numbers only' } },
+        s: { required: false, integer: true,  min: 0, max: 500000,
+             msgs: { range: 'Between $0 and $500,000', integer: 'Whole numbers only' } }
+    };
+
+    function fieldError(id) {
+        var rule = RULES[id];
+        var raw  = document.getElementById(id).value.trim();
+        if (raw === '') return rule.required ? rule.msgs.required : '';
+        var num = Number(raw);
+        if (isNaN(num)) return 'Enter a valid number';
+        if (rule.integer && num % 1 !== 0) return rule.msgs.integer;
+        if (num < rule.min || num > rule.max) return rule.msgs.range;
+        return '';
+    }
+
+    function showFieldError(id) {
+        var msg = fieldError(id);
+        document.getElementById(id).classList.toggle('invalid', msg !== '');
+        document.getElementById(id + '-error').textContent = msg;
+        return msg === '';
+    }
+
+    function clearFieldError(id) {
+        document.getElementById(id).classList.remove('invalid');
+        document.getElementById(id + '-error').textContent = '';
+    }
+
+    function updateSaveBtn() {
+        var saveBtn = document.getElementById('saveBtn');
+        if (savedScenarios.length >= MAX_SAVED) {
+            saveBtn.disabled    = true;
+            saveBtn.textContent = 'Max 4';
+            return;
+        }
+        var allValid = ['p', 'r', 't', 'c', 'e', 's'].every(function(id) {
+            return fieldError(id) === '';
+        });
+        saveBtn.disabled    = !allValid;
+        saveBtn.textContent = 'Save';
+    }
+
+    // ── Chart ────────────────────────────────────────────
+    // ── Key Insights ─────────────────────────────────────
+    function computeInsights(inp, arr) {
+        var insights = [];
+        var r          = inp.r / 100;
+        var selfContrib = inp.c || 0;
+        var fmt = d3.format(',.0f');
+
+        // 1. Year annual interest outpaces self contribution (excluding employer match)
+        if (selfContrib > 0) {
+            for (var j = 1; j <= inp.t; j++) {
+                var annInt = arr[j].Interest - arr[j - 1].Interest;
+                if (annInt >= selfContrib) {
+                    insights.push({
+                        type:  'milestone',
+                        year:  j,
+                        title: 'Lift Off',
+                        tag:   'Year ' + j,
+                        value: '$' + fmt(annInt) + '<span class="ic-unit">/yr</span>',
+                        label: 'Annual interest outpaces your self contribution'
+                    });
+                    break;
                 }
-        */
-        // create the initial svg
-        function lineChartCreate(sectionID, height, width, margin) {
-            var svg = d3.select(sectionID)
-                // Container class to make it responsive.
-                // .classed("svg-container", true) 
-                .append("svg")
-                .attr("viewBox", "0 0 800 350")
-            // Class to make it responsive.
-            //.classed("svg-content-responsive", true)
+            }
         }
 
-        // update the svg when inputs change
-        function lineChartUpdate(sectionID, height, width, margin, data, transition, prev) {
-            var series = d3.stack().keys(keys)(data)
-            console.log(series)
-            let next = d3.max(series, d => d3.max(d, d => d[1]));
-            var format = d3.format(",d");
-            d3.select("#result")
-                .transition()
-                .duration(3000)
-                .tween("text", function () {
-                    var that = d3.select(this),
-                        i = d3.interpolateNumber(prev, next);
-                    return function (t) { that.text(format(i(t))); };
-                })
-                .transition()
-                .delay(3000);
-            // scaling the x var
-            x = d3.scaleBand()
-                .domain(data.map(d => d.time))
-                .range([margin.left, width - margin.right])
-                .padding(padding);
-            // scaling the y var
-            y = d3.scaleLinear()
-                .domain([0, d3.max(series, d => d3.max(d, d => d[1]))])
-                .rangeRound([height - margin.bottom, margin.top]);
+        // 2. Year cumulative interest overtakes total contributions
+        for (var i = 1; i <= inp.t; i++) {
+            var totContrib = arr[i]['Self Contributions'] + arr[i]['Work Contributions'];
+            if (arr[i].Interest >= totContrib) {
+                insights.push({
+                    type:  'milestone',
+                    year:  i,
+                    title: 'Tipping Point',
+                    tag:   'Year ' + i,
+                    value: '$' + fmt(arr[i].amount),
+                    label: 'Interest overtakes total contributions'
+                });
+                break;
+            }
+        }
 
-            color = d3.scaleOrdinal()
-                .range(colorList1);
+        // 3. Coast FI — always shown; unlocks when yearly spend is provided
+        var yearlySpend = inp.s || 0;
+        if (yearlySpend > 0 && r > 0) {
+            var fiTarget  = yearlySpend * 25;
+            var coastYear = null;
+            for (var k = 1; k <= inp.t; k++) {
+                var coastNeeded = fiTarget / Math.pow(1 + r, inp.t - k);
+                if (arr[k].amount >= coastNeeded) { coastYear = k; break; }
+            }
+            if (coastYear !== null) {
+                insights.push({
+                    type:  'milestone',
+                    year:  coastYear,
+                    title: 'Coast FI',
+                    tag:   'Year ' + coastYear,
+                    value: '$' + fmt(fiTarget),
+                    label: 'FI target — stop contributing now and coast to full FI by year ' + inp.t
+                });
+            } else {
+                insights.push({
+                    type:  'milestone',
+                    title: 'Coast FI',
+                    tag:   'Not within timeline',
+                    value: '$' + fmt(fiTarget),
+                    label: 'FI target — extend your timeline or increase contributions'
+                });
+            }
+        } else {
+            insights.push({
+                type:  'milestone',
+                title: 'Coast FI',
+                tag:   ' ',
+                value: '&mdash;',
+                label: 'Enter your yearly spend above to unlock this insight'
+            });
+        }
 
-            reversedColor = d3.scaleOrdinal()
-                .range(colorList2);
+        // 4. Sustainable income at retirement (interest only — principal preserved)
+        if (r > 0) {
+            var sustIncome = arr[inp.t].amount * r;
+            insights.push({
+                type:  'income',
+                title: 'Skim the Top',
+                tag:   'Conservative',
+                value: '$' + fmt(sustIncome) + '<span class="ic-unit">/yr</span>',
+                label: 'Withdraw interest only — principal preserved forever'
+            });
+        }
 
-            xAxis = g => g
-                .attr("transform", `translate(0,${height - margin.bottom})`)
-                .call(d3.axisBottom(x).tickFormat(d3.format("d")).ticks(width / 80).tickSizeOuter(0));
-            yAxis = g => g
-                .attr("transform", `translate(${margin.left},0)`)
-                .call(d3.axisLeft(y).ticks(5).tickFormat(d3.format('$,.3s')))
-                .call(g => g.selectAll(".domain").remove());
+        // 5. 30-year drawdown (spend it all — annuity formula)
+        var finalBal = arr[inp.t].amount;
+        var drawdown = r > 0
+            ? finalBal * r / (1 - Math.pow(1 + r, -30))
+            : finalBal / 30;
+        insights.push({
+            type:  'income',
+            title: 'Die with Zero',
+            tag:   'Aggressive',
+            value: '$' + fmt(drawdown) + '<span class="ic-unit">/yr</span>',
+            label: 'Full spend-down over 30 years'
+        });
 
-            // const reversedKeys = keys.reverse()
+        return insights;
+    }
 
-            legend = svg => {
-                const g = svg
-                    // .attr("transform", `translate(${width},0)`)
-                    .attr("text-anchor", "end")
-                    .attr("font-family", "sans-serif")
-                    .attr("font-size", 10)
-                    .selectAll("g")
-                    .data(reversedKeys)
-                    .join("g")
-                    .attr("transform", (d, i) => `translate(${i * (width / 6)},0)`);
+    function renderInsights(insights, isInitial) {
+        var container = document.getElementById('insightCards');
+        container.innerHTML = '';
+        var baseDelay = PREFERS_REDUCED_MOTION.matches ? 0 : (isInitial ? 3100 : 50);
+        var inp = readInputs();
 
-                g.append("rect")
-                    .attr("x", 450)
-                    .attr("width", 19)
-                    .attr("height", 19)
-                    .attr("fill", reversedColor);
+        insights.forEach(function(ins, i) {
+            var card = document.createElement('div');
+            card.className = 'insightCard' + (ins.type === 'income' ? ' ic-income' : '');
+            card.setAttribute('role', 'listitem');
+            var numBadge = ins.year !== undefined
+                ? '<span class="ic-num">' + (i + 1) + '</span>'
+                : '';
+            card.innerHTML =
+                '<div class="ic-tag">' + numBadge + ins.tag + '</div>' +
+                (ins.title ? '<div class="ic-title">' + ins.title + '</div>' : '') +
+                '<div class="ic-value">' + ins.value + '</div>' +
+                '<div class="ic-label">' + ins.label + '</div>';
+            container.appendChild(card);
+
+            // Wire card hover + keyboard focus → bar highlight
+            var highlightYear = ins.year !== undefined ? ins.year
+                : ins.type === 'income' ? inp.t : null;
+            if (highlightYear !== null) {
+                card.style.cursor = 'pointer';
+                card.setAttribute('tabindex', '0');
+                var onActivate = function(y) { return function() { highlightBars(y); }; }(highlightYear);
+                card.addEventListener('mouseenter', onActivate);
+                card.addEventListener('focus',      onActivate);
+                card.addEventListener('mouseleave', clearBarHighlight);
+                card.addEventListener('blur',       clearBarHighlight);
+                card.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); highlightBars(highlightYear); }
+                });
+            }
+
+            setTimeout(function(c) {
+                return function() { c.classList.add('ic-visible'); };
+            }(card), baseDelay + i * 130);
+        });
+    }
+
+    function highlightBars(year) {
+        var dt = year;
+        for (var k = 0; k < displayTimesCache.length; k++) {
+            if (displayTimesCache[k] >= year) { dt = displayTimesCache[k]; break; }
+        }
+        d3.select(sectionID).select("svg").selectAll("g.bar-group rect")
+            .transition().duration(100)
+            .attr("opacity", function(d) { return d.data.time === dt ? 1 : 0.25; });
+    }
+
+    function clearBarHighlight() {
+        d3.select(sectionID).select("svg").selectAll("g.bar-group rect")
+            .transition().duration(180)
+            .attr("opacity", 1);
+    }
+
+    function setupBarHighlight(selection) {
+        selection
+            .style("cursor", "pointer")
+            .on("mouseover.hl", function(event, d) { highlightBars(d.data.time); })
+            .on("mouseleave.hl", clearBarHighlight);
+    }
+
+    function drawMilestoneMarkers(svg, x, y, displayTimes, inp, arr, insights, isInitial) {
+        svg.selectAll(".milestone-marker").remove();
+
+        var r     = isMobile() ? 9  : 6;
+        var lineH = isMobile() ? 14 : 11;
+        var fs    = isMobile() ? 11 : 7;
+        var color = '#7657f4';
+
+        // Build a map of displayTime → [{ins, num}] for milestone insights only
+        var byDt = {};
+        insights.forEach(function(ins, idx) {
+            if (ins.year === undefined) return;
+            // Find the first displayTime >= milestone year within the bar range
+            var dt = null;
+            for (var k = 0; k < displayTimes.length; k++) {
+                if (displayTimes[k] >= ins.year && displayTimes[k] <= inp.t) {
+                    dt = displayTimes[k];
+                    break;
+                }
+            }
+            if (dt === null || x(dt) === undefined) return;
+            if (!byDt[dt]) byDt[dt] = [];
+            byDt[dt].push({ ins: ins, num: idx + 1 });
+        });
+
+        Object.keys(byDt).forEach(function(dt) {
+            dt = +dt;
+            var group  = byDt[dt];
+            var barTop = y(arr[dt].amount);
+            var baseCx = x(dt) + x.bandwidth() / 2;
+
+            group.forEach(function(m, gi) {
+                var cx = group.length === 1 ? baseCx
+                    : baseCx + (gi === 0 ? -(r + 3) : (r + 3));
+                var cy = barTop - lineH - r;
+                var g  = svg.append("g").attr("class", "milestone-marker").attr("opacity", 0);
+
+                g.append("line")
+                    .attr("x1", cx).attr("x2", cx)
+                    .attr("y1", barTop - 2).attr("y2", cy + r)
+                    .attr("stroke", color).attr("stroke-width", 1.5)
+                    .attr("stroke-dasharray", "2,2");
+
+                g.append("circle")
+                    .attr("cx", cx).attr("cy", cy)
+                    .attr("r", r).attr("fill", color);
 
                 g.append("text")
-                    .attr("x", 445)
-                    .attr("y", 12)
-                    .attr("dy", "0.1em")
-                    .text(d => d);
-            }
+                    .attr("x", cx).attr("y", cy)
+                    .attr("text-anchor", "middle")
+                    .attr("dominant-baseline", "central")
+                    .attr("font-family", "sans-serif")
+                    .attr("font-size", fs)
+                    .attr("font-weight", "700")
+                    .attr("fill", "#fff")
+                    .text(m.num);
+            });
+        });
 
+        var rm = PREFERS_REDUCED_MOTION.matches;
+        svg.selectAll(".milestone-marker")
+            .transition().delay(rm ? 0 : (isInitial ? 2900 : 0)).duration(rm ? 0 : 400)
+            .attr("opacity", 1);
+    }
 
-            var div = d3.select("body").append("div")
-                .attr("class", "tooltip")
-                .style("opacity", 0);
+    function lineChartCreate() {
+        updateChartDims();
+        var svg = d3.select(sectionID).append("svg")
+            .attr("viewBox", "0 0 " + width + " " + height)
+            .attr("role", "img")
+            .attr("aria-label", "Stacked bar chart showing retirement savings growth over time, broken down by self contributions, employer contributions, and interest earned");
+        svg.append("title").text("Retirement Savings Projection Chart");
+    }
 
-            var svg = d3.select(sectionID)
-                .select('svg');
-            if (transition == "initial") {
-                var set = svg.selectAll("g")
-                    .data(series)
-                    .join('g')
-                    .attr("fill", (d, i) => color(i))
-                    .selectAll("rect")
-                    .data(d => d)
-                    .join('rect')
-                    .attr("x", (d, i) => { return x(d.data.time) })
-                    .attr("width", x.bandwidth())
-                    .attr("y", d => { return y(0) })
-                    .attr("height", "0")
+    function lineChartUpdate(isInitial) {
+        updateChartDims();
+        d3.select(sectionID).select("svg").attr("viewBox", "0 0 " + width + " " + height);
+        var inp = readInputs();
+        totalArray = computeArray(inp.p, inp.r, inp.t, inp.c, inp.e);
+        updatePanel();
 
-                set.transition()
-                    .duration(3000)
-                    .attr("y", d => { return y(d[1]) })
-                    .attr("height", d => { return y(d[0]) - y(d[1]) })
-                    .style("font", "14px times")
+        var maxT = Math.max(
+            inp.t,
+            savedScenarios.reduce(function(m, sc) { return Math.max(m, sc.t); }, 0)
+        );
 
-                var format = d3.format(",.2r");
+        // Build grouped x-axis domain; on mobile collapses 10+ year projections into intervals
+        var groupSize    = getMobileGroupSize(maxT);
+        var displayTimes = buildDisplayTimes(maxT, groupSize);
 
-                set.on("mouseover", function (d) {
-                    div.style("opacity", 1)
-                        .style("position", "absolute")
-                        .style("text-align", "center")
-                        .style("width", "60px")
-                        .style("height", "12px")
-                        .style("padding", "2px")
-                        .style("font", "12px sans-serif")
-                        .style("background", "#FFFFFF")
-                        .style("border", "1px")
-                        .style("border-radius", "2px")
-                        .style("pointer-events", "none")
-                        .style("padding", "5px 0");
-                    div.html("$" + format(d[1] - d[0]) + "<br/>")
-                        .style("left", (d3.event.pageX) + "px")
-                        .style("top", (d3.event.pageY) + "px");
-                })
-                    .on("mouseout", function (d) {
-                        div.transition()
-                            .duration(0)
-                            .style("opacity", 0);
-                    })
-            } else {
-                svg.selectAll("g")
-                    .data(series)
-                    .join('g')
-                    .attr("fill", (d, i) => color(i))
-                    .selectAll("rect")
-                    .data(d => d)
-                    .join('rect')
-                    .transition()
-                    .duration(3000)
-                    .attr("y", d => { return y(d[1]) })
-                    .attr("height", d => { return y(d[0]) - y(d[1]) })
-                    .attr("x", (d, i) => { return x(d.data.time) })
-                    .attr("width", x.bandwidth());
-            }
+        // Ensure every scenario's endpoint year is in the domain so lines can terminate correctly
+        savedScenarios.forEach(function(sc) {
+            if (displayTimes.indexOf(sc.t) === -1) displayTimes.push(sc.t);
+        });
+        if (displayTimes.indexOf(inp.t) === -1) displayTimes.push(inp.t);
+        displayTimes.sort(function(a, b) { return a - b; });
+        displayTimesCache = displayTimes;
 
-            svg.append("g")
-                .call(xAxis)
-                .attr("class", "axis");
-            svg.append("g")
-                .call(yAxis)
-                .attr("class", "axis");
-            svg.append("g")
-                .call(legend)
-                .attr("class", "legend");
-/*
-            svg.append("text")
-                .text((d) => d[0])
-                .attr("x", (d, i) => { return x(d.data.time) })
-                .attr("y", d => { return y(d[1]) })
-                .attr("text-anchor", "middle");
-*/
-            // text label for the x axis
-            svg.append("text")
-                .attr("transform",
-                    "translate(" + (width / 2) + " ," +
-                    (height + margin.top + 10) + ")")
-                .style("text-anchor", "middle")
-                .text("Years")
-                .attr("class", "axisLabel");
+        // Bars use current-scenario data sampled at displayTimes checkpoints
+        var barTimes    = displayTimes.filter(function(t) { return t <= inp.t; });
+        var displayData = barTimes.map(function(t) { return totalArray[t]; });
+
+        var series = d3.stack().keys(KEYS)(displayData);
+
+        var yMax = d3.max(series, function(s) { return d3.max(s, function(d) { return d[1]; }); });
+        savedScenarios.forEach(function(sc) {
+            var peak = sc.totalArray[sc.totalArray.length - 1].amount;
+            if (peak > yMax) yMax = peak;
+        });
+
+        var x = d3.scaleBand()
+            .domain(displayTimes)
+            .range([margin.left, width - margin.right])
+            .padding(PADDING);
+
+        var y = d3.scaleLinear()
+            .domain([0, yMax * Y_MAX_PAD])
+            .rangeRound([height - margin.bottom, margin.top]);
+
+        var colorFn = d3.scaleOrdinal().domain(KEYS)
+            .range(KEYS.map(function(k) { return BAR_COLORS[k]; }));
+
+        var xAxis = function(g) {
+            g.attr("transform", "translate(0," + (height - margin.bottom) + ")")
+             .call(d3.axisBottom(x).tickFormat(d3.format("d")).tickSizeOuter(0));
+        };
+
+        var yAxis = function(g) {
+            g.attr("transform", "translate(" + margin.left + ",0)")
+             .call(d3.axisLeft(y).ticks(5).tickFormat(function(d) { return d === 0 ? '$0' : d3.format('$,.3s')(d); }))
+             .call(function(g) { g.selectAll(".domain").remove(); });
+        };
+
+        var svg = d3.select(sectionID).select("svg");
+
+        var ANIM_MS = PREFERS_REDUCED_MOTION.matches ? 0 : 3000;
+
+        if (isInitial) {
+            // Draw bars at their final positions immediately
+            var groups = svg.selectAll("g.bar-group")
+                .data(series)
+                .join(function(enter) { return enter.append("g").attr("class", "bar-group"); })
+                .attr("fill", function(d) { return colorFn(d.key); });
+
+            var bars = groups.selectAll("rect").data(function(d) { return d; })
+                .join("rect")
+                .attr("x",      function(d) { return x(d.data.time); })
+                .attr("width",  x.bandwidth())
+                .attr("y",      function(d) { return y(d[1]); })
+                .attr("height", function(d) { return y(d[0]) - y(d[1]); });
+
+            attachTooltip(bars);
+            setupBarHighlight(bars);
+
+            // White cover rect sits over the bars and shrinks upward, revealing them
+            // from the baseline up. Axes/legend are appended after this in SVG order
+            // so they remain visible on top throughout. This approach avoids SVG
+            // clipPath url() references which break on iOS Safari when ancestors
+            // have CSS transforms (our mobile sheet does).
+            var coverRect = svg.append("rect")
+                .attr("class", "bar-cover")
+                .attr("x",      margin.left)
+                .attr("y",      margin.top)
+                .attr("width",  width - margin.left - margin.right)
+                .attr("height", height - margin.top - margin.bottom)
+                .attr("fill",   "#fcfcff");
+
+            coverRect.transition().duration(ANIM_MS)
+                .attr("height", 0)
+                .on("end", function() { coverRect.remove(); });
+
+            // Count-up hero number — same duration as bar animation
+            var numFmt = d3.format(",d");
+            d3.select("#result").transition().duration(ANIM_MS)
+                .tween("text", function() {
+                    var el = d3.select(this);
+                    var interp = d3.interpolateNumber(0, yMax);
+                    return function(t) { el.text("$" + numFmt(interp(t))); };
+                });
+
+        } else {
+            // Interrupt any in-progress bar-reveal animation before rebuilding
+            svg.selectAll(".bar-cover").interrupt().remove();
+            svg.selectAll("g.bar-group rect").interrupt();
+
+            var gs = svg.selectAll("g.bar-group").data(series)
+                .join(function(enter) { return enter.append("g").attr("class", "bar-group"); })
+                .attr("fill", function(d) { return colorFn(d.key); });
+
+            var rects = gs.selectAll("rect").data(function(d) { return d; })
+                .join("rect")
+                .attr("x",      function(d) { return x(d.data.time); })
+                .attr("width",  x.bandwidth())
+                .attr("y",      function(d) { return y(d[1]); })
+                .attr("height", function(d) { return y(d[0]) - y(d[1]); });
+
+            attachTooltip(rects);
+            setupBarHighlight(rects);
         }
 
-        calculateBasedOnInputs();
-        lineChartCreate(sectionID, height, width, margin);
-        lineChartUpdate(sectionID, height, width, margin, totalArray, transition, prev);
-        function clickToUpdate() {
-            let transition = "later";
-            calculateBasedOnInputs();
-            lineChartUpdate(sectionID, height, width, margin, totalArray, transition, prev);
+        // Saved scenario lines — sampled at the same displayTimes checkpoints as the bars
+        svg.selectAll(".sc-line").remove();
+        savedScenarios.forEach(function(sc) {
+            var scTimes      = displayTimes.filter(function(t) { return t <= sc.t; });
+            var scData       = scTimes.map(function(t) { return sc.totalArray[t]; });
+
+            var lineGen = d3.line()
+                .x(function(d) { return x(d.time) + x.bandwidth() / 2; })
+                .y(function(d) { return y(d.amount); });
+
+            svg.append("path")
+                .attr("class", "sc-line")
+                .datum(scData)
+                .attr("fill", "none")
+                .attr("stroke", sc.color)
+                .attr("stroke-width", 2.5)
+                .attr("stroke-dasharray", "7,4")
+                .attr("d", lineGen);
+
+            var last = scData[scData.length - 1];
+            svg.append("circle").attr("class", "sc-line")
+                .attr("cx", x(last.time) + x.bandwidth() / 2)
+                .attr("cy", y(last.amount))
+                .attr("r", 4).attr("fill", sc.color);
+        });
+
+        // Structural elements
+        svg.selectAll(".x-axis, .y-axis, .chart-legend, .axisLabel").remove();
+        svg.append("g").call(xAxis).attr("class", "x-axis axis");
+        svg.append("g").call(yAxis).attr("class", "y-axis axis");
+
+        // Bar category legend
+        // On mobile the 500-unit viewBox renders at ~0.75× — use a larger SVG font-size
+        // to hit legible actual pixel sizes, and shorten labels so they don't overflow.
+        var lgFs     = isMobile() ? 18 : 10;
+        var lgShort  = { 'Interest': 'Interest', 'Work Contributions': 'Work', 'Self Contributions': 'Self' };
+        var revKeys  = ['Interest', 'Work Contributions', 'Self Contributions'];
+        var lgColStep = (width - margin.left - margin.right) / LG_COL_DIV;
+        var lgG = svg.append("g").attr("class", "chart-legend")
+            .attr("font-family", "sans-serif").attr("font-size", lgFs)
+            .selectAll("g").data(revKeys).join("g")
+            .attr("transform", function(d, i) {
+                return "translate(" + (margin.left + i * lgColStep) + ",0)";
+            });
+
+        lgG.append("rect").attr("x", 0).attr("width", 13).attr("height", 13)
+            .attr("fill", function(d) { return BAR_COLORS[d]; });
+        lgG.append("text").attr("x", 17).attr("y", 10).attr("dy", "0.1em")
+            .attr("text-anchor", "start")
+            .text(function(d) { return isMobile() ? lgShort[d] : d; });
+
+        // Saved scenario line legend
+        if (savedScenarios.length) {
+            var scLeg = svg.append("g").attr("class", "chart-legend")
+                .attr("font-family", "sans-serif").attr("font-size", lgFs)
+                .attr("transform", "translate(" + margin.left + "," + SC_LEG_Y + ")");
+
+            savedScenarios.forEach(function(sc, i) {
+                var gx = i * SC_LEG_STEP;
+                var gg = scLeg.append("g").attr("transform", "translate(" + gx + ",0)");
+                gg.append("line")
+                    .attr("x1", 0).attr("y1", 6).attr("x2", 18).attr("y2", 6)
+                    .attr("stroke", sc.color).attr("stroke-width", 2.5)
+                    .attr("stroke-dasharray", "5,3");
+                gg.append("circle").attr("cx", 18).attr("cy", 6).attr("r", 3).attr("fill", sc.color);
+                gg.append("text").attr("x", 24).attr("y", 10).attr("fill", "#555")
+                    .attr("text-anchor", "start").text(sc.name);
+            });
         }
-    </script>
+
+        var yLabelY = isMobile() ? (height - margin.bottom + 52) : (height + margin.top + 2);
+        svg.append("text")
+            .attr("transform", "translate(" + (width / 2) + "," + yLabelY + ")")
+            .style("text-anchor", "middle").attr("class", "axisLabel").text("Years");
+
+        var chartInsights = computeInsights(inp, totalArray);
+        drawMilestoneMarkers(svg, x, y, displayTimes, inp, totalArray, chartInsights, isInitial);
+        renderInsights(chartInsights, isInitial);
+    }
+
+    // ── Init ──────────────────────────────────────────────
+    setupMobileInputs();
+    lineChartCreate();
+    lineChartUpdate(true);
+    updateSaveBtn();
+
+    // Live updates + validation
+    var debounceTimer;
+    function scheduleUpdate() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(function() {
+            // Guard: only update the chart when all required fields are valid,
+            // otherwise computeArray receives NaN and the UI shows "$NaN".
+            var requiredValid = ['p', 'r', 't'].every(function(id) {
+                return fieldError(id) === '';
+            });
+            if (requiredValid) lineChartUpdate(false);
+        }, 400);
+    }
+    ['p','r','t','c','e','s'].forEach(function(id) {
+        document.getElementById(id).addEventListener('input', function() {
+            scheduleUpdate();
+            // Clear error as soon as the field becomes valid (don't add new errors while typing)
+            if (fieldError(id) === '') clearFieldError(id);
+            updateSaveBtn();
+        });
+        document.getElementById(id).addEventListener('blur', function() {
+            showFieldError(id);
+            updateSaveBtn();
+        });
+    });
+
+    // Save scenario
+    document.getElementById("saveBtn").addEventListener("click", function() {
+        if (savedScenarios.length >= MAX_SAVED) return;
+        // Validate all fields and surface any errors before saving
+        var inputsValid = ['p', 'r', 't', 'c', 'e', 's'].reduce(function(ok, id) {
+            return showFieldError(id) && ok;
+        }, true);
+        if (!inputsValid) { updateSaveBtn(); return; }
+
+        var nameEl = document.getElementById("scenarioName");
+        var name   = nameEl.value.trim();
+        if (!name) {
+            nameEl.classList.add("error");
+            nameEl.focus();
+            setTimeout(function() { nameEl.classList.remove("error"); }, 1200);
+            return;
+        }
+        var inp = readInputs();
+        savedScenarios.push({
+            name: name,
+            p: inp.p, r: inp.r, t: inp.t, c: inp.c, e: inp.e,
+            totalArray: computeArray(inp.p, inp.r, inp.t, inp.c, inp.e),
+            color: SC_COLORS[savedScenarios.length]
+        });
+        nameEl.value = "";
+        renderSavedSection();
+        lineChartUpdate(false);
+    });
+
+    document.getElementById("scenarioName").addEventListener("keydown", function(e) {
+        if (e.key === "Enter") document.getElementById("saveBtn").click();
+    });
+
+    // ── Mobile sheet controls ─────────────────────────────
+    document.getElementById("mobileConfigBtn").addEventListener("click", openSheet);
+    document.getElementById("sheetDoneBtn").addEventListener("click", closeSheet);
+    document.getElementById("mobileOverlay").addEventListener("click", closeSheet);
+
+    // ── Resize: re-run layout and redraw in place ────────
+    // Do NOT remove/recreate the SVG — that would kill any in-progress animation.
+    // lineChartUpdate already updates the viewBox and redraws all content.
+    var resizeTimer;
+    window.addEventListener("resize", function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function() {
+            setupMobileInputs();
+            lineChartUpdate(false);
+        }, 200);
+    });
+</script>
 </body>
 
 </html>
