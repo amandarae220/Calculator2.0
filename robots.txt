@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://amandarae220.github.io/Calculator2.0/sitemap.xml
