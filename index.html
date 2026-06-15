@@ -1,5 +1,3 @@
-<!-- view visualization here: https://amandarae220.github.io/Calculator2.0/ -->
-
 <html lang="en">
 
 <head>
@@ -8,31 +6,58 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Project your retirement savings with an interactive compound interest calculator. See when investments outpace contributions and calculate your Coast FI number.">
     <meta name="keywords" content="retirement calculator, compound interest, Coast FI, FIRE calculator, financial independence, savings projection, investment growth">
+    <meta name="author" content="Amanda Anderson">
     <meta name="theme-color" content="#5a38e0">
 
     <link rel="canonical" href="https://amandarae220.github.io/Calculator2.0/">
+
+    <!-- Performance: warm up the connections we'll need before the parser hits them -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://d3js.org">
+    <link rel="dns-prefetch" href="https://d3js.org">
 
     <meta property="og:type" content="website">
     <meta property="og:title" content="Retirement Savings Calculator">
     <meta property="og:description" content="Project your retirement savings with an interactive compound interest calculator. See when investments outpace contributions and calculate your Coast FI number.">
     <meta property="og:url" content="https://amandarae220.github.io/Calculator2.0/">
     <meta property="og:image" content="https://amandarae220.github.io/Calculator2.0/preview.png">
+    <meta property="og:image:alt" content="Stacked bar chart showing projected retirement savings growth over 20 years.">
     <meta property="og:site_name" content="Retirement Savings Calculator">
+    <meta property="og:locale" content="en_US">
 
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Retirement Savings Calculator">
     <meta name="twitter:description" content="Project your retirement savings with an interactive compound interest calculator. See when investments outpace contributions and calculate your Coast FI number.">
     <meta name="twitter:image" content="https://amandarae220.github.io/Calculator2.0/preview.png">
+    <meta name="twitter:image:alt" content="Stacked bar chart showing projected retirement savings growth over 20 years.">
 
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "WebApplication",
       "name": "Retirement Savings Calculator",
+      "alternateName": "Compound Interest Visualizer",
       "description": "An interactive compound interest visualizer that projects retirement savings growth year by year and surfaces key financial milestones including Coast FI, Lift Off, and Tipping Point.",
       "url": "https://amandarae220.github.io/Calculator2.0/",
       "applicationCategory": "FinanceApplication",
       "operatingSystem": "Web",
+      "inLanguage": "en",
+      "dateModified": "2026-06-14",
+      "screenshot": "https://amandarae220.github.io/Calculator2.0/preview.png",
+      "featureList": [
+        "Compound interest projection over any timeline",
+        "Stacked breakdown of principal, self contributions, employer contributions, and earned interest",
+        "Coast FI calculator using the 25x rule",
+        "Annual interest vs. contribution crossover detection",
+        "Conservative and aggressive retirement drawdown scenarios",
+        "Compare up to 4 saved scenarios on the same chart"
+      ],
+      "author": {
+        "@type": "Person",
+        "name": "Amanda Anderson",
+        "url": "https://github.com/amandarae220"
+      },
       "offers": {
         "@type": "Offer",
         "price": "0",
@@ -52,6 +77,17 @@
             --brand-income:  #1680d4;
             --bg-surface:    #fcfcff;
             --color-error:   #ff6b6b;
+
+            /* Chart series tokens — referenced from JS via getComputedStyle */
+            --chart-self:    #7657f4;
+            --chart-work:    #bfb5ff;
+            --chart-interest:#68d0fa;
+
+            /* Saved-scenario palette (in display order) */
+            --sc-color-1:    #e8774a;
+            --sc-color-2:    #2baa6a;
+            --sc-color-3:    #1680d4;
+            --sc-color-4:    #c94fa0;
         }
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -616,6 +652,10 @@
             flex-shrink: 0;
         }
 
+        .tt-dot-self     { background: var(--chart-self); }
+        .tt-dot-work     { background: var(--chart-work); }
+        .tt-dot-interest { background: var(--chart-interest); }
+
         .tt-label { display: flex; align-items: center; }
 
         /* ══════════════════════════════════════════
@@ -842,11 +882,25 @@
 </head>
 
 <body>
+<noscript>
+    <div style="max-width:680px;margin:48px auto;padding:24px;font-family:sans-serif;line-height:1.6;color:#1a1a2e">
+        <h1 style="font-size:24px;margin-bottom:12px">Retirement Savings Calculator</h1>
+        <p>This interactive compound interest visualizer requires JavaScript to run the projection chart. Enable JavaScript and reload to:</p>
+        <ul>
+            <li>Project your retirement savings over any timeline</li>
+            <li>See when your interest earnings overtake your contributions</li>
+            <li>Calculate your Coast FI number using the 25x rule</li>
+            <li>Model conservative and aggressive drawdown scenarios at retirement</li>
+        </ul>
+        <p>Source code: <a href="https://github.com/amandarae220/Calculator2.0">github.com/amandarae220/Calculator2.0</a></p>
+    </div>
+</noscript>
+
 <div id="app">
 
     <!-- ══ LEFT PANEL ══ -->
     <aside id="leftPanel" aria-label="Calculator inputs and summary">
-        <h1 class="appTitle">Retirement Calculator</h1>
+        <h1 class="appTitle">Retirement Savings Calculator</h1>
 
         <section id="hero" aria-label="Total savings summary" aria-live="polite" aria-atomic="true">
             <div class="metaLabel">Total Savings</div>
@@ -917,18 +971,18 @@
             <div id="chart"></div>
         </div>
 
-        <div id="insightsSection">
-            <div class="insightsSectionTitle">Key Insights</div>
+        <section id="insightsSection" aria-labelledby="insightsHeading">
+            <h2 id="insightsHeading" class="insightsSectionTitle">Key Insights</h2>
             <div id="insightCards" role="list" aria-label="Key insights about your retirement projection" aria-live="polite"></div>
-        </div>
+        </section>
 
-        <div id="savedSection">
+        <section id="savedSection" aria-labelledby="savedHeading">
             <div class="savedSectionHeader">
-                <span class="savedSectionTitle">Saved Scenarios</span>
+                <h2 id="savedHeading" class="savedSectionTitle">Saved Scenarios</h2>
                 <span class="savedSectionSub" id="savedCount" aria-live="polite"></span>
             </div>
             <div id="savedCards"></div>
-        </div>
+        </section>
     </main>
 
 </div>
@@ -958,15 +1012,15 @@
 <div id="tooltip" aria-hidden="true">
     <div class="tt-year" id="ttYear"></div>
     <div class="tt-row">
-        <span class="tt-label"><span class="tt-dot" style="background:#68d0fa"></span>Interest</span>
+        <span class="tt-label"><span class="tt-dot tt-dot-interest"></span>Interest</span>
         <span id="ttInterest"></span>
     </div>
     <div class="tt-row">
-        <span class="tt-label"><span class="tt-dot" style="background:#BFB5FF"></span>Work Contributions</span>
+        <span class="tt-label"><span class="tt-dot tt-dot-work"></span>Work Contributions</span>
         <span id="ttWork"></span>
     </div>
     <div class="tt-row">
-        <span class="tt-label"><span class="tt-dot" style="background:#7657f4"></span>Self Contributions</span>
+        <span class="tt-label"><span class="tt-dot tt-dot-self"></span>Self Contributions</span>
         <span id="ttSelf"></span>
     </div>
     <div class="tt-row tt-total">
@@ -976,18 +1030,34 @@
 </div>
 
 <script>
-    var KEYS       = ['Self Contributions', 'Work Contributions', 'Interest'];
-    var BAR_COLORS = { 'Self Contributions': '#7657f4', 'Work Contributions': '#BFB5FF', 'Interest': '#68d0fa' };
-    var SC_COLORS  = ['#e8774a', '#2baa6a', '#1680d4', '#c94fa0'];
-    var MAX_SAVED  = 4;
+    var KEYS      = ['Self Contributions', 'Work Contributions', 'Interest'];
+    var MAX_SAVED = 4;
+
+    // Read chart colors from CSS custom properties so design tokens stay
+    // the single source of truth — change a color in one place, not two.
+    function readCssVar(name) {
+        return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+
+    var BAR_COLORS = {
+        'Self Contributions': readCssVar('--chart-self'),
+        'Work Contributions': readCssVar('--chart-work'),
+        'Interest':           readCssVar('--chart-interest')
+    };
+    var SC_COLORS = [
+        readCssVar('--sc-color-1'),
+        readCssVar('--sc-color-2'),
+        readCssVar('--sc-color-3'),
+        readCssVar('--sc-color-4')
+    ];
+    var MARKER_COLOR = readCssVar('--brand-accent');
+    var COVER_COLOR  = readCssVar('--bg-surface');
 
     // Chart layout constants
     var Y_MAX_PAD    = 1.05;  // headroom above the tallest bar
     var LG_COL_DIV   = 3.2;   // divides chart width into legend columns (>3 adds breathing room)
     var SC_LEG_STEP  = 140;   // horizontal gap between saved-scenario legend entries
     var SC_LEG_Y     = 18;    // y-offset of saved-scenario legend row below the bar legend
-    var MARKER_COLOR = '#7657f4'; // milestone markers; matches --brand-accent
-    var COVER_COLOR  = '#fcfcff'; // bar-reveal cover rect; matches --bg-surface
 
     // Cached once so all callers share the same MediaQueryList instance
     var PREFERS_REDUCED_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -1157,57 +1227,85 @@
             savedScenarios.length + " of " + MAX_SAVED;
         updateSaveBtn();
 
-        container.innerHTML = "";
+        container.textContent = '';
         savedScenarios.forEach(function(sc, idx) {
-            var sav  = Math.round(sc.totalArray[sc.totalArray.length - 1].amount);
-            var con  = Math.round(sc.p + (sc.c + sc.e) * sc.t);
-            var int_ = Math.max(0, sav - con);
-
-            var card = document.createElement("div");
-            card.className = "savedCard";
-            card.style.borderTopColor = sc.color;
-            card.innerHTML =
-                '<div class="savedCardHeader">' +
-                    '<span class="savedCardName">' +
-                        '<span class="scDot" style="background:' + sc.color + '"></span>' +
-                        escHtml(sc.name) +
-                    '</span>' +
-                    '<button class="deleteBtn" data-idx="' + idx + '" aria-label="Delete scenario ' + escHtml(sc.name) + '">×</button>' +
-                '</div>' +
-                '<div class="savedCardPills">' +
-                    '<span class="pill">' + fmtCompact(sc.p) + ' start</span>' +
-                    '<span class="pill">' + sc.r + '% rate</span>' +
-                    '<span class="pill">' + sc.t + ' yrs</span>' +
-                    '<span class="pill">Self ' + fmtCompact(sc.c) + '</span>' +
-                    '<span class="pill">Employer ' + fmtCompact(sc.e) + '</span>' +
-                '</div>' +
-                '<div class="savedCardMetrics">' +
-                    metric(fmtDollar(sav),  "Total") +
-                    metric(fmtDollar(con),  "Contributed") +
-                    metric(fmtDollar(int_), "Interest") +
-                '</div>';
-            container.appendChild(card);
-        });
-
-        container.querySelectorAll(".deleteBtn").forEach(function(btn) {
-            btn.addEventListener("click", function() {
-                savedScenarios.splice(+this.dataset.idx, 1);
-                savedScenarios.forEach(function(sc, i) { sc.color = SC_COLORS[i]; });
-                renderSavedSection();
-                lineChartUpdate(false);
-            });
+            container.appendChild(buildSavedCard(sc, idx));
         });
     }
 
-    function metric(val, label) {
-        return '<div class="savedMetric">' +
-            '<div class="savedMetricVal">' + val + '</div>' +
-            '<div class="savedMetricLabel">' + label + '</div>' +
-        '</div>';
+    function buildSavedCard(sc, idx) {
+        var sav      = Math.round(sc.totalArray[sc.totalArray.length - 1].amount);
+        var con      = Math.round(sc.p + (sc.c + sc.e) * sc.t);
+        var interest = Math.max(0, sav - con);
+
+        var card = document.createElement('div');
+        card.className = 'savedCard';
+        card.style.borderTopColor = sc.color;
+
+        var header = document.createElement('div');
+        header.className = 'savedCardHeader';
+
+        var nameWrap = document.createElement('span');
+        nameWrap.className = 'savedCardName';
+        var dot = document.createElement('span');
+        dot.className = 'scDot';
+        dot.style.background = sc.color;
+        nameWrap.appendChild(dot);
+        nameWrap.appendChild(document.createTextNode(sc.name));
+
+        var deleteBtn = document.createElement('button');
+        deleteBtn.className = 'deleteBtn';
+        deleteBtn.setAttribute('aria-label', 'Delete scenario ' + sc.name);
+        deleteBtn.textContent = '×';
+        deleteBtn.addEventListener('click', function() {
+            savedScenarios.splice(idx, 1);
+            savedScenarios.forEach(function(s, i) { s.color = SC_COLORS[i]; });
+            renderSavedSection();
+            lineChartUpdate(false);
+        });
+
+        header.appendChild(nameWrap);
+        header.appendChild(deleteBtn);
+
+        var pills = document.createElement('div');
+        pills.className = 'savedCardPills';
+        [
+            fmtCompact(sc.p) + ' start',
+            sc.r + '% rate',
+            sc.t + ' yrs',
+            'Self ' + fmtCompact(sc.c),
+            'Employer ' + fmtCompact(sc.e)
+        ].forEach(function(text) {
+            var pill = document.createElement('span');
+            pill.className = 'pill';
+            pill.textContent = text;
+            pills.appendChild(pill);
+        });
+
+        var metrics = document.createElement('div');
+        metrics.className = 'savedCardMetrics';
+        metrics.appendChild(renderMetric(fmtDollar(sav),      'Total'));
+        metrics.appendChild(renderMetric(fmtDollar(con),      'Contributed'));
+        metrics.appendChild(renderMetric(fmtDollar(interest), 'Interest'));
+
+        card.appendChild(header);
+        card.appendChild(pills);
+        card.appendChild(metrics);
+        return card;
     }
 
-    function escHtml(s) {
-        return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    function renderMetric(value, label) {
+        var wrap = document.createElement('div');
+        wrap.className = 'savedMetric';
+        var val = document.createElement('div');
+        val.className = 'savedMetricVal';
+        val.textContent = value;
+        var lbl = document.createElement('div');
+        lbl.className = 'savedMetricLabel';
+        lbl.textContent = label;
+        wrap.appendChild(val);
+        wrap.appendChild(lbl);
+        return wrap;
     }
 
     // ── Tooltip ──────────────────────────────────────────
@@ -1289,10 +1387,10 @@
             saveBtn.textContent = 'Max 4';
             return;
         }
-        var allValid = ['p', 'r', 't', 'c', 'e', 's'].every(function(id) {
+        var areAllFieldsValid = ['p', 'r', 't', 'c', 'e', 's'].every(function(id) {
             return fieldError(id) === '';
         });
-        saveBtn.disabled    = !allValid;
+        saveBtn.disabled    = !areAllFieldsValid;
         saveBtn.textContent = 'Save';
     }
 
@@ -1314,7 +1412,8 @@
                         year:  j,
                         title: 'Lift Off',
                         tag:   'Year ' + j,
-                        value: '$' + fmt(annInt) + '<span class="ic-unit">/yr</span>',
+                        value: '$' + fmt(annInt),
+                        unit:  '/yr',
                         label: 'Annual interest outpaces your self contribution'
                     });
                     break;
@@ -1370,7 +1469,7 @@
                 type:  'milestone',
                 title: 'Coast FI',
                 tag:   ' ',
-                value: '&mdash;',
+                value: '—',
                 label: 'Enter your yearly spend above to unlock this insight'
             });
         }
@@ -1382,7 +1481,8 @@
                 type:  'income',
                 title: 'Skim the Top',
                 tag:   'Conservative',
-                value: '$' + fmt(sustIncome) + '<span class="ic-unit">/yr</span>',
+                value: '$' + fmt(sustIncome),
+                unit:  '/yr',
                 label: 'Withdraw interest only — principal preserved forever'
             });
         }
@@ -1396,31 +1496,64 @@
             type:  'income',
             title: 'Die with Zero',
             tag:   'Aggressive',
-            value: '$' + fmt(drawdown) + '<span class="ic-unit">/yr</span>',
+            value: '$' + fmt(drawdown),
+            unit:  '/yr',
             label: 'Full spend-down over 30 years'
         });
 
         return insights;
     }
 
+    function buildInsightCard(ins, i) {
+        var card = document.createElement('div');
+        card.className = 'insightCard' + (ins.type === 'income' ? ' ic-income' : '');
+        card.setAttribute('role', 'listitem');
+
+        var tag = document.createElement('div');
+        tag.className = 'ic-tag';
+        if (ins.year !== undefined) {
+            var num = document.createElement('span');
+            num.className = 'ic-num';
+            num.textContent = String(i + 1);
+            tag.appendChild(num);
+        }
+        tag.appendChild(document.createTextNode(ins.tag));
+        card.appendChild(tag);
+
+        if (ins.title) {
+            var title = document.createElement('div');
+            title.className = 'ic-title';
+            title.textContent = ins.title;
+            card.appendChild(title);
+        }
+
+        var value = document.createElement('div');
+        value.className = 'ic-value';
+        value.appendChild(document.createTextNode(ins.value));
+        if (ins.unit) {
+            var unit = document.createElement('span');
+            unit.className = 'ic-unit';
+            unit.textContent = ins.unit;
+            value.appendChild(unit);
+        }
+        card.appendChild(value);
+
+        var label = document.createElement('div');
+        label.className = 'ic-label';
+        label.textContent = ins.label;
+        card.appendChild(label);
+
+        return card;
+    }
+
     function renderInsights(insights, isInitial) {
         var container = document.getElementById('insightCards');
-        container.innerHTML = '';
+        container.textContent = '';
         var baseDelay = PREFERS_REDUCED_MOTION.matches ? 0 : (isInitial ? 3100 : 50);
         var inp = readInputs();
 
         insights.forEach(function(ins, i) {
-            var card = document.createElement('div');
-            card.className = 'insightCard' + (ins.type === 'income' ? ' ic-income' : '');
-            card.setAttribute('role', 'listitem');
-            var numBadge = ins.year !== undefined
-                ? '<span class="ic-num">' + (i + 1) + '</span>'
-                : '';
-            card.innerHTML =
-                '<div class="ic-tag">' + numBadge + ins.tag + '</div>' +
-                (ins.title ? '<div class="ic-title">' + ins.title + '</div>' : '') +
-                '<div class="ic-value">' + ins.value + '</div>' +
-                '<div class="ic-label">' + ins.label + '</div>';
+            var card = buildInsightCard(ins, i);
             container.appendChild(card);
 
             // Wire card hover + keyboard focus → bar highlight
@@ -1760,10 +1893,10 @@
         debounceTimer = setTimeout(function() {
             // Guard: only update the chart when all required fields are valid,
             // otherwise computeArray receives NaN and the UI shows "$NaN".
-            var requiredValid = ['p', 'r', 't'].every(function(id) {
+            var areRequiredFieldsValid = ['p', 'r', 't'].every(function(id) {
                 return fieldError(id) === '';
             });
-            if (requiredValid) lineChartUpdate(false);
+            if (areRequiredFieldsValid) lineChartUpdate(false);
         }, 400);
     }
     ['p','r','t','c','e','s'].forEach(function(id) {
@@ -1783,10 +1916,10 @@
     document.getElementById("saveBtn").addEventListener("click", function() {
         if (savedScenarios.length >= MAX_SAVED) return;
         // Validate all fields and surface any errors before saving
-        var inputsValid = ['p', 'r', 't', 'c', 'e', 's'].reduce(function(ok, id) {
-            return showFieldError(id) && ok;
+        var areInputsValid = ['p', 'r', 't', 'c', 'e', 's'].reduce(function(isValid, id) {
+            return showFieldError(id) && isValid;
         }, true);
-        if (!inputsValid) { updateSaveBtn(); return; }
+        if (!areInputsValid) { updateSaveBtn(); return; }
 
         var nameEl = document.getElementById("scenarioName");
         var name   = nameEl.value.trim();
