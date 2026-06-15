@@ -1,5 +1,3 @@
-<!-- view visualization here: https://amandarae220.github.io/Calculator2.0/ -->
-
 <html lang="en">
 
 <head>
@@ -8,31 +6,58 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Project your retirement savings with an interactive compound interest calculator. See when investments outpace contributions and calculate your Coast FI number.">
     <meta name="keywords" content="retirement calculator, compound interest, Coast FI, FIRE calculator, financial independence, savings projection, investment growth">
+    <meta name="author" content="Amanda Anderson">
     <meta name="theme-color" content="#5a38e0">
 
     <link rel="canonical" href="https://amandarae220.github.io/Calculator2.0/">
+
+    <!-- Performance: warm up the connections we'll need before the parser hits them -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://d3js.org">
+    <link rel="dns-prefetch" href="https://d3js.org">
 
     <meta property="og:type" content="website">
     <meta property="og:title" content="Retirement Savings Calculator">
     <meta property="og:description" content="Project your retirement savings with an interactive compound interest calculator. See when investments outpace contributions and calculate your Coast FI number.">
     <meta property="og:url" content="https://amandarae220.github.io/Calculator2.0/">
     <meta property="og:image" content="https://amandarae220.github.io/Calculator2.0/preview.png">
+    <meta property="og:image:alt" content="Stacked bar chart showing projected retirement savings growth over 20 years.">
     <meta property="og:site_name" content="Retirement Savings Calculator">
+    <meta property="og:locale" content="en_US">
 
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Retirement Savings Calculator">
     <meta name="twitter:description" content="Project your retirement savings with an interactive compound interest calculator. See when investments outpace contributions and calculate your Coast FI number.">
     <meta name="twitter:image" content="https://amandarae220.github.io/Calculator2.0/preview.png">
+    <meta name="twitter:image:alt" content="Stacked bar chart showing projected retirement savings growth over 20 years.">
 
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "WebApplication",
       "name": "Retirement Savings Calculator",
+      "alternateName": "Compound Interest Visualizer",
       "description": "An interactive compound interest visualizer that projects retirement savings growth year by year and surfaces key financial milestones including Coast FI, Lift Off, and Tipping Point.",
       "url": "https://amandarae220.github.io/Calculator2.0/",
       "applicationCategory": "FinanceApplication",
       "operatingSystem": "Web",
+      "inLanguage": "en",
+      "dateModified": "2026-06-14",
+      "screenshot": "https://amandarae220.github.io/Calculator2.0/preview.png",
+      "featureList": [
+        "Compound interest projection over any timeline",
+        "Stacked breakdown of principal, self contributions, employer contributions, and earned interest",
+        "Coast FI calculator using the 25x rule",
+        "Annual interest vs. contribution crossover detection",
+        "Conservative and aggressive retirement drawdown scenarios",
+        "Compare up to 4 saved scenarios on the same chart"
+      ],
+      "author": {
+        "@type": "Person",
+        "name": "Amanda Anderson",
+        "url": "https://github.com/amandarae220"
+      },
       "offers": {
         "@type": "Offer",
         "price": "0",
@@ -857,11 +882,25 @@
 </head>
 
 <body>
+<noscript>
+    <div style="max-width:680px;margin:48px auto;padding:24px;font-family:sans-serif;line-height:1.6;color:#1a1a2e">
+        <h1 style="font-size:24px;margin-bottom:12px">Retirement Savings Calculator</h1>
+        <p>This interactive compound interest visualizer requires JavaScript to run the projection chart. Enable JavaScript and reload to:</p>
+        <ul>
+            <li>Project your retirement savings over any timeline</li>
+            <li>See when your interest earnings overtake your contributions</li>
+            <li>Calculate your Coast FI number using the 25x rule</li>
+            <li>Model conservative and aggressive drawdown scenarios at retirement</li>
+        </ul>
+        <p>Source code: <a href="https://github.com/amandarae220/Calculator2.0">github.com/amandarae220/Calculator2.0</a></p>
+    </div>
+</noscript>
+
 <div id="app">
 
     <!-- ══ LEFT PANEL ══ -->
     <aside id="leftPanel" aria-label="Calculator inputs and summary">
-        <h1 class="appTitle">Retirement Calculator</h1>
+        <h1 class="appTitle">Retirement Savings Calculator</h1>
 
         <section id="hero" aria-label="Total savings summary" aria-live="polite" aria-atomic="true">
             <div class="metaLabel">Total Savings</div>
@@ -932,18 +971,18 @@
             <div id="chart"></div>
         </div>
 
-        <div id="insightsSection">
-            <div class="insightsSectionTitle">Key Insights</div>
+        <section id="insightsSection" aria-labelledby="insightsHeading">
+            <h2 id="insightsHeading" class="insightsSectionTitle">Key Insights</h2>
             <div id="insightCards" role="list" aria-label="Key insights about your retirement projection" aria-live="polite"></div>
-        </div>
+        </section>
 
-        <div id="savedSection">
+        <section id="savedSection" aria-labelledby="savedHeading">
             <div class="savedSectionHeader">
-                <span class="savedSectionTitle">Saved Scenarios</span>
+                <h2 id="savedHeading" class="savedSectionTitle">Saved Scenarios</h2>
                 <span class="savedSectionSub" id="savedCount" aria-live="polite"></span>
             </div>
             <div id="savedCards"></div>
-        </div>
+        </section>
     </main>
 
 </div>
