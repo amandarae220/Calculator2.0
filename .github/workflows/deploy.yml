@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [feature/angular-makeover, main]
+    branches: [feature/angular-makeover, main, v1]
   workflow_dispatch:
 
 permissions:
@@ -25,10 +25,10 @@ jobs:
           ref: feature/angular-makeover
           path: v2
 
-      - name: Checkout v1 (main)
+      - name: Checkout v1 (frozen branch)
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: v1
           path: v1
 
       - name: Assemble deploy tree (v2 at /, v1 at /v1/)
