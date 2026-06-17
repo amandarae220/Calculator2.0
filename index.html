@@ -15,7 +15,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://d3js.org">
+    <link rel="preconnect" href="https://ctohybdnobylnlhpbajt.supabase.co" crossorigin>
     <link rel="dns-prefetch" href="https://d3js.org">
+    <link rel="dns-prefetch" href="https://ctohybdnobylnlhpbajt.supabase.co">
 
     <meta property="og:type" content="website">
     <meta property="og:title" content="Retirement Savings Calculator">
@@ -67,6 +69,7 @@
     </script>
 
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -1092,6 +1095,7 @@
         var sheet = document.getElementById("mobileSheet");
         var focusable = sheet.querySelectorAll('input, button, [tabindex]:not([tabindex="-1"])');
         if (focusable.length) setTimeout(function() { focusable[0].focus(); }, 50);
+        if (window.CalcAnalytics) window.CalcAnalytics.mobileSheetOpened();
     }
 
     function closeSheet() {
@@ -1556,13 +1560,19 @@
             var card = buildInsightCard(ins, i);
             container.appendChild(card);
 
-            // Wire card hover + keyboard focus → bar highlight
+            // Wire card hover + keyboard focus → bar highlight (+ analytics)
             var highlightYear = ins.year !== undefined ? ins.year
                 : ins.type === 'income' ? inp.t : null;
             if (highlightYear !== null) {
                 card.style.cursor = 'pointer';
                 card.setAttribute('tabindex', '0');
-                var onActivate = function(y) { return function() { highlightBars(y); }; }(highlightYear);
+                var insightName = ins.title || ins.tag;
+                var onActivate = function(y, name) {
+                    return function() {
+                        highlightBars(y);
+                        if (window.CalcAnalytics) window.CalcAnalytics.insightFocused(name);
+                    };
+                }(highlightYear, insightName);
                 card.addEventListener('mouseenter', onActivate);
                 card.addEventListener('focus',      onActivate);
                 card.addEventListener('mouseleave', clearBarHighlight);
@@ -1896,7 +1906,10 @@
             var areRequiredFieldsValid = ['p', 'r', 't'].every(function(id) {
                 return fieldError(id) === '';
             });
-            if (areRequiredFieldsValid) lineChartUpdate(false);
+            if (areRequiredFieldsValid) {
+                lineChartUpdate(false);
+                if (window.CalcAnalytics) window.CalcAnalytics.calculation();
+            }
         }, 400);
     }
     ['p','r','t','c','e','s'].forEach(function(id) {
@@ -1905,6 +1918,9 @@
             // Clear error as soon as the field becomes valid (don't add new errors while typing)
             if (fieldError(id) === '') clearFieldError(id);
             updateSaveBtn();
+            if (id === 's' && this.value.trim() !== '' && window.CalcAnalytics) {
+                window.CalcAnalytics.coastFiUsed(+this.value);
+            }
         });
         document.getElementById(id).addEventListener('blur', function() {
             showFieldError(id);
@@ -1939,6 +1955,7 @@
         nameEl.value = "";
         renderSavedSection();
         lineChartUpdate(false);
+        if (window.CalcAnalytics) window.CalcAnalytics.scenarioSaved(name, inp);
     });
 
     document.getElementById("scenarioName").addEventListener("keydown", function(e) {
@@ -1962,6 +1979,9 @@
         }, 200);
     });
 </script>
+
+<script src="assets/config.js"></script>
+<script src="assets/analytics.js"></script>
 </body>
 
 </html>

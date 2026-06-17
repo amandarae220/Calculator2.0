@@ -1,4 +1,6 @@
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /admin.html
 
 Sitemap: https://amandarae220.github.io/Calculator2.0/sitemap.xml
