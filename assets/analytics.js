@@ -2,7 +2,14 @@
     'use strict';
 
     var cfg = window.CALC_CONFIG;
-    if (!cfg || !window.supabase || !window.supabase.createClient) return;
+    if (!cfg) {
+        console.warn('[analytics] window.CALC_CONFIG missing — config.js did not load');
+        return;
+    }
+    if (!window.supabase || !window.supabase.createClient) {
+        console.warn('[analytics] window.supabase missing — Supabase UMD bundle did not load (extension blocked the CDN?)');
+        return;
+    }
 
     // ── Localhost short-circuit ───────────────────────────────────────────────
     var host = window.location.hostname;
@@ -64,9 +71,21 @@
     };
 
     function track(eventType, extras) {
-        if (isLocalhost) return;
+        if (isLocalhost) {
+            console.info('[analytics] skipped on localhost:', eventType);
+            return;
+        }
         var row = Object.assign({}, pageBase, { event_type: eventType }, extras || {});
-        client.from(cfg.EVENT_TABLE).insert(row).then(function () {}, function () {});
+        client.from(cfg.EVENT_TABLE).insert(row).then(
+            function (res) {
+                if (res && res.error) {
+                    console.error('[analytics] insert failed for ' + eventType + ':', res.error);
+                }
+            },
+            function (err) {
+                console.error('[analytics] insert threw for ' + eventType + ':', err);
+            }
+        );
     }
 
     // ── Once-per-session guard for "first time" events ────────────────────────
@@ -82,23 +101,12 @@
     track('page_view');
 
     function trackExit() {
-        if (firedOnce.page_exit) return;
+        if (isLocalhost || firedOnce.page_exit) return;
         firedOnce.page_exit = true;
         var duration = Math.round((Date.now() - pageStart) / 1000);
-        if (isLocalhost) return;
-        // Use sendBeacon so the request survives the unload.
-        try {
-            var url = cfg.SUPABASE_URL + '/rest/v1/' + cfg.EVENT_TABLE;
-            var body = JSON.stringify(Object.assign({}, pageBase, {
-                event_type: 'page_exit',
-                duration_seconds: duration,
-            }));
-            var blob = new Blob([body], { type: 'application/json' });
-            // sendBeacon doesn't let us set custom headers; the Supabase REST API
-            // requires apikey + Authorization, so beacon would 401. Fall through
-            // to the regular client which uses fetch with keepalive.
-            void url; void blob;
-        } catch (_) { /* noop */ }
+        // Supabase REST requires apikey/Authorization headers, so navigator.sendBeacon
+        // can't be used. The client uses fetch with keepalive, which modern browsers
+        // honor on unload.
         client.from(cfg.EVENT_TABLE).insert(Object.assign({}, pageBase, {
             event_type: 'page_exit',
             duration_seconds: duration,
