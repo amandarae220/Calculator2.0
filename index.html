@@ -1491,8 +1491,44 @@
             }
         }
 
-        // 3. Coast FI — always shown; unlocks when yearly spend is provided
         var yearlySpend = inp.s || 0;
+
+        // 3. Lean FI — year balance reaches a leaner FI target (60% of stated spend × 25)
+        if (yearlySpend > 0) {
+            var leanFiTarget = yearlySpend * 0.6 * 25;
+            var leanYear = null;
+            for (var m = 1; m <= inp.t; m++) {
+                if (arr[m].amount >= leanFiTarget) { leanYear = m; break; }
+            }
+            if (leanYear !== null) {
+                insights.push({
+                    type:  'milestone',
+                    year:  leanYear,
+                    title: 'Lean FI',
+                    tag:   'Year ' + leanYear,
+                    value: '$' + fmt(leanFiTarget),
+                    label: 'Lean FI target reached — you could fully retire on a trimmed budget'
+                });
+            } else {
+                insights.push({
+                    type:  'milestone',
+                    title: 'Lean FI',
+                    tag:   'Not within timeline',
+                    value: '$' + fmt(leanFiTarget),
+                    label: 'Lean FI target — extend your timeline or increase contributions'
+                });
+            }
+        } else {
+            insights.push({
+                type:  'milestone',
+                title: 'Lean FI',
+                tag:   ' ',
+                value: '—',
+                label: 'Enter your yearly spend above to unlock this insight'
+            });
+        }
+
+        // 4. Coast FI — unlocks when yearly spend is provided
         if (yearlySpend > 0 && r > 0) {
             var fiTarget  = yearlySpend * 25;
             var coastYear = null;
@@ -1528,7 +1564,8 @@
             });
         }
 
-        // 4. Sustainable income at retirement (interest only — principal preserved)
+
+        // 5. Sustainable income at retirement (interest only — principal preserved)
         if (r > 0) {
             var sustIncome = arr[inp.t].amount * r;
             insights.push({
@@ -1541,7 +1578,7 @@
             });
         }
 
-        // 5. 30-year drawdown (spend it all — annuity formula)
+        // 6. 30-year drawdown (spend it all — annuity formula)
         var finalBal = arr[inp.t].amount;
         var drawdown = r > 0
             ? finalBal * r / (1 - Math.pow(1 + r, -30))
@@ -1570,6 +1607,10 @@
             'Short for "Coast Financial Independence." It\'s the amount you\'d need invested today so that, without saving another dollar, ' +
             'compound growth alone would carry you to full FI by your target year. Calculated using the 25× rule ' +
             '(25 years of annual expenses, derived from the Trinity Study / 4% safe withdrawal rate).',
+        'Lean FI':
+            'Short for "Lean Financial Independence." The year your balance crosses a leaner FI target — ' +
+            'enough to fully retire on roughly 60% of your stated yearly spend (the FIRE community\'s rough definition of a no-frills early retirement). ' +
+            'Calculated as 60% of your yearly spend × 25.',
         'Skim the Top':
             'The conservative drawdown strategy. Withdraw only the interest each year, leaving the principal untouched. ' +
             'This income could continue indefinitely, but it usually means living below your means in retirement.',
