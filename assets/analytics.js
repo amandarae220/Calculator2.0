@@ -15,7 +15,15 @@
     var host = window.location.hostname;
     var isLocalhost = host === 'localhost' || host === '127.0.0.1' || host === '::1';
 
-    // ── Visitor identity (matches amanda-repository pattern) ──────────────────
+    // ── Consent state ─────────────────────────────────────────────────────────
+    // Tracking only fires when consent === 'accepted'. While consent is null
+    // (banner still showing), events queue up and flush on accept.
+    var CONSENT_KEY = 'calc_analytics_consent';
+    function getConsent() {
+        try { return localStorage.getItem(CONSENT_KEY); } catch (e) { return null; }
+    }
+
+    // ── Visitor identity ──────────────────────────────────────────────────────
     var VISITOR_ID_KEY        = 'calc_visitor_id';
     var VISITOR_ID_ISSUED_KEY = 'calc_visitor_id_issued_at';
     var VISITOR_ID_TTL_MS     = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -55,28 +63,43 @@
         try { return new URL(ref).hostname; } catch (_) { return ref; }
     }
 
-    // ── Supabase client ───────────────────────────────────────────────────────
-    var client = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY, {
-        auth: { persistSession: false, autoRefreshToken: false },
-    });
-
-    // ── Event sender ──────────────────────────────────────────────────────────
-    var visitorId = getVisitorId();
-    var pageBase = {
-        visitor_id: visitorId,
-        page:       window.location.pathname,
-        referrer:   getReferrer(),
-        device:     getDevice(),
-        browser:    getBrowser(),
-    };
-
-    function track(eventType, extras) {
-        if (isLocalhost) {
-            console.info('[analytics] skipped on localhost:', eventType);
-            return;
+    // ── Supabase client (only configured once consent is known) ──────────────
+    var client = null;
+    function ensureClient() {
+        if (!client) {
+            client = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY, {
+                auth: { persistSession: false, autoRefreshToken: false },
+            });
         }
-        var row = Object.assign({}, pageBase, { event_type: eventType }, extras || {});
-        client.from(cfg.EVENT_TABLE).insert(row).then(
+        return client;
+    }
+
+    // pageBase is built lazily — we don't want to mint a visitor_id until
+    // the user has accepted analytics. That way 'declined' visitors never
+    // get a UUID written to their localStorage.
+    var pageBase = null;
+    function ensurePageBase() {
+        if (!pageBase) {
+            pageBase = {
+                visitor_id: getVisitorId(),
+                page:       window.location.pathname,
+                referrer:   getReferrer(),
+                device:     getDevice(),
+                browser:    getBrowser(),
+            };
+        }
+        return pageBase;
+    }
+
+    // ── Event queue ──────────────────────────────────────────────────────────
+    // Events that arrive before consent is granted go into pendingEvents and
+    // get flushed on accept. Events that arrive after a 'declined' choice are
+    // dropped silently.
+    var pendingEvents = [];
+
+    function send(eventType, extras) {
+        var row = Object.assign({}, ensurePageBase(), { event_type: eventType }, extras || {});
+        ensureClient().from(cfg.EVENT_TABLE).insert(row).then(
             function (res) {
                 if (res && res.error) {
                     console.error('[analytics] insert failed for ' + eventType + ':', res.error);
@@ -88,6 +111,21 @@
         );
     }
 
+    function track(eventType, extras) {
+        if (isLocalhost) {
+            console.info('[analytics] skipped on localhost:', eventType);
+            return;
+        }
+        var consent = getConsent();
+        if (consent === 'declined') return;
+        if (consent === 'accepted') {
+            send(eventType, extras);
+        } else {
+            // Consent undecided — buffer for later
+            pendingEvents.push({ eventType: eventType, extras: extras });
+        }
+    }
+
     // ── Once-per-session guard for "first time" events ────────────────────────
     var firedOnce = {};
     function trackOnce(eventType, extras) {
@@ -96,21 +134,31 @@
         track(eventType, extras);
     }
 
-    // ── Page view / page exit (auto) ──────────────────────────────────────────
+    // ── Consent change listener: flush queue on accept, clear it on decline ──
+    window.addEventListener('calc:consent', function (e) {
+        var v = e && e.detail;
+        if (v === 'accepted') {
+            var q = pendingEvents.slice();
+            pendingEvents = [];
+            q.forEach(function (item) { send(item.eventType, item.extras); });
+        } else if (v === 'declined') {
+            pendingEvents = [];
+        }
+    });
+
+    // ── Page view (auto, may be queued) ──────────────────────────────────────
     var pageStart = Date.now();
     track('page_view');
 
     function trackExit() {
         if (isLocalhost || firedOnce.page_exit) return;
         firedOnce.page_exit = true;
+        if (getConsent() !== 'accepted') return;
         var duration = Math.round((Date.now() - pageStart) / 1000);
         // Supabase REST requires apikey/Authorization headers, so navigator.sendBeacon
         // can't be used. The client uses fetch with keepalive, which modern browsers
         // honor on unload.
-        client.from(cfg.EVENT_TABLE).insert(Object.assign({}, pageBase, {
-            event_type: 'page_exit',
-            duration_seconds: duration,
-        })).then(function () {}, function () {});
+        send('page_exit', { duration_seconds: duration });
     }
     window.addEventListener('pagehide', trackExit);
     window.addEventListener('beforeunload', trackExit);
