@@ -477,6 +477,27 @@
         .ic-info:focus-visible { outline: 2px solid var(--brand-accent); outline-offset: 2px; }
         .ic-income .ic-info { color: var(--brand-income); }
 
+        /* Input-label variant — sits next to small uppercase labels on the purple panel */
+        .ic-info.input-info {
+            color: rgba(255,255,255,0.7);
+            opacity: 0.7;
+            vertical-align: middle;
+        }
+        .ic-info.input-info:hover,
+        .ic-info.input-info:focus-visible {
+            color: #fff;
+            opacity: 1;
+        }
+        .ic-info.input-info:focus-visible {
+            outline-color: rgba(255,255,255,0.7);
+        }
+
+        /* Inside the white mobile sheet, switch back to brand-accent on the lighter background */
+        #mobileSheetContent .ic-info.input-info { color: #888; }
+        #mobileSheetContent .ic-info.input-info:hover,
+        #mobileSheetContent .ic-info.input-info:focus-visible { color: var(--brand-accent); }
+        #mobileSheetContent .ic-info.input-info:focus-visible { outline-color: var(--brand-accent); }
+
         #infoTooltip {
             position: fixed;
             max-width: 260px;
@@ -1008,8 +1029,8 @@
         <hr class="panelDivider">
 
         <div id="saveBar">
-            <label for="scenarioName" class="sr-only">Scenario name (30 character limit)</label>
-            <input id="scenarioName" type="text" maxlength="30" placeholder="Name this scenario…" aria-describedby="saveBtn" autocomplete="off">
+            <label for="scenarioName" class="sr-only">Scenario name (20 character limit)</label>
+            <input id="scenarioName" type="text" maxlength="20" placeholder="Name this scenario…" aria-describedby="saveBtn" autocomplete="off">
             <button id="saveBtn">Save</button>
         </div>
         </div><!-- /#inputsSection -->
@@ -1108,9 +1129,6 @@
 
     // Chart layout constants
     var Y_MAX_PAD    = 1.05;  // headroom above the tallest bar
-    var LG_COL_DIV   = 3.2;   // divides chart width into legend columns (>3 adds breathing room)
-    var SC_LEG_STEP  = 140;   // horizontal gap between saved-scenario legend entries
-    var SC_LEG_Y     = 18;    // y-offset of saved-scenario legend row below the bar legend
 
     // Cached once so all callers share the same MediaQueryList instance
     var PREFERS_REDUCED_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -1596,7 +1614,8 @@
     }
 
     // Plain-language explainers for each insight card. Keyed by title.
-    var INSIGHT_DEFINITIONS = {
+    var INFO_DEFINITIONS = {
+        // Insight cards
         'Lift Off':
             'The first year your annual interest earnings exceed your own yearly contributions. ' +
             "From this point on, your money is doing more work than you are — that's the magic of compound growth.",
@@ -1617,14 +1636,36 @@
         'Die with Zero':
             'The aggressive drawdown strategy, inspired by Bill Perkins\' book of the same name. ' +
             'Spend down your entire balance over 30 years using a standard annuity formula. ' +
-            'The philosophy: maximize life experiences rather than leave a large unspent estate.'
+            'The philosophy: maximize life experiences rather than leave a large unspent estate.',
+
+        // Input fields
+        'Starting Amount':
+            'The current value of your investments — the principal that starts compounding from year 1. ' +
+            'Include all the accounts you\'re growing toward financial independence (401(k), IRA, HSA, taxable brokerage, etc.). ' +
+            'Bigger starting balances compound more aggressively, since growth is multiplicative.',
+        'Rate (%)':
+            'Expected average annual return on your investments, before inflation. ' +
+            'The S&P 500 has historically averaged ~10% nominal (~7% after inflation). ' +
+            'Most conservative projections use 6–8%. Small differences here compound dramatically over long timelines.',
+        'Years':
+            'How many years your money compounds before you start drawing from it — usually the time until you plan to retire or reach FI. ' +
+            'Longer timelines let compound growth do more of the work; small rate differences become large dollar differences.',
+        'Self Contribution':
+            'How much you personally add to your investments each year — salary deferrals, IRA contributions, brokerage deposits. ' +
+            'This is the lever you control most directly. Increasing it by even a few thousand a year can shift Lift Off and Tipping Point years earlier.',
+        'Employer Contribution':
+            'How much your employer adds to your retirement accounts each year — typically a 401(k) match, pension, or profit-share. ' +
+            'It\'s free money on top of your salary. Maxing this out is usually the highest-ROI move in any financial plan.',
+        'Yearly Spend':
+            'How much you expect to spend per year in retirement. Used to calculate FI targets via the 25× rule ' +
+            '(e.g., $50k yearly spend → $1.25M target). Leave blank if you don\'t have a target lifestyle yet — Coast FI and Lean FI unlock once filled in.'
     };
 
     var infoTooltipEl = document.getElementById('infoTooltip');
     var activeInfoBtn = null;
 
     function showInfoTooltip(btn, title) {
-        var defText = INSIGHT_DEFINITIONS[title];
+        var defText = INFO_DEFINITIONS[title];
         if (!defText) return;
         infoTooltipEl.innerHTML = '';
         var t = document.createElement('div');
@@ -1689,7 +1730,7 @@
             var title = document.createElement('div');
             title.className = 'ic-title';
             title.appendChild(document.createTextNode(ins.title));
-            if (INSIGHT_DEFINITIONS[ins.title]) {
+            if (INFO_DEFINITIONS[ins.title]) {
                 var info = document.createElement('button');
                 info.type = 'button';
                 info.className = 'ic-info';
@@ -2026,44 +2067,62 @@
         svg.append("g").call(xAxis).attr("class", "x-axis axis");
         svg.append("g").call(yAxis).attr("class", "y-axis axis");
 
-        // Bar category legend
-        // On mobile the 500-unit viewBox renders at ~0.75× — use a larger SVG font-size
-        // to hit legible actual pixel sizes, and shorten labels so they don't overflow.
+        // Combined legend — bar categories + saved scenarios on a single row.
+        // Items are packed left-to-right using the rendered text width of each
+        // label, so the gap between items stays consistent regardless of label
+        // length. On mobile the 500-unit viewBox renders at ~0.75× — use a
+        // larger SVG font-size to hit legible actual pixel sizes, and shorten
+        // the bar-category labels so the row doesn't blow past the chart edge.
         var lgFs     = isMobile() ? 18 : 10;
         var lgShort  = { 'Interest': 'Interest', 'Work Contributions': 'Work', 'Self Contributions': 'Self' };
         var revKeys  = ['Interest', 'Work Contributions', 'Self Contributions'];
-        var lgColStep = (width - margin.left - margin.right) / LG_COL_DIV;
-        var lgG = svg.append("g").attr("class", "chart-legend")
+        var itemGap  = isMobile() ? 26 : 16;
+        var swatch   = isMobile() ? 16 : 13;
+        var labelGap = 4;
+
+        // Anchor the legend close to the SVG left edge instead of the y-axis line
+        // so 4 maxed-out scenario names still fit before the row overflows.
+        var legendX = isMobile() ? 14 : 8;
+        var legendG = svg.append("g").attr("class", "chart-legend")
             .attr("font-family", "sans-serif").attr("font-size", lgFs)
-            .selectAll("g").data(revKeys).join("g")
-            .attr("transform", function(d, i) {
-                return "translate(" + (margin.left + i * lgColStep) + ",0)";
-            });
+            .attr("transform", "translate(" + legendX + ",0)");
 
-        lgG.append("rect").attr("x", 0).attr("width", 13).attr("height", 13)
-            .attr("fill", function(d) { return BAR_COLORS[d]; });
-        lgG.append("text").attr("x", 17).attr("y", 10).attr("dy", "0.1em")
-            .attr("text-anchor", "start")
-            .text(function(d) { return isMobile() ? lgShort[d] : d; });
+        var xOff = 0;
 
-        // Saved scenario line legend
-        if (savedScenarios.length) {
-            var scLeg = svg.append("g").attr("class", "chart-legend")
-                .attr("font-family", "sans-serif").attr("font-size", lgFs)
-                .attr("transform", "translate(" + margin.left + "," + SC_LEG_Y + ")");
+        revKeys.forEach(function(key) {
+            var g = legendG.append("g").attr("transform", "translate(" + xOff + ",0)");
+            g.append("rect")
+                .attr("x", 0).attr("y", 0)
+                .attr("width", swatch).attr("height", swatch)
+                .attr("fill", BAR_COLORS[key]);
+            var t = g.append("text")
+                .attr("x", swatch + labelGap)
+                .attr("y", swatch - 3)
+                .attr("text-anchor", "start")
+                .text(isMobile() ? lgShort[key] : key);
+            xOff += swatch + labelGap + t.node().getBBox().width + itemGap;
+        });
 
-            savedScenarios.forEach(function(sc, i) {
-                var gx = i * SC_LEG_STEP;
-                var gg = scLeg.append("g").attr("transform", "translate(" + gx + ",0)");
-                gg.append("line")
-                    .attr("x1", 0).attr("y1", 6).attr("x2", 18).attr("y2", 6)
-                    .attr("stroke", sc.color).attr("stroke-width", 2.5)
-                    .attr("stroke-dasharray", "5,3");
-                gg.append("circle").attr("cx", 18).attr("cy", 6).attr("r", 3).attr("fill", sc.color);
-                gg.append("text").attr("x", 24).attr("y", 10).attr("fill", "#555")
-                    .attr("text-anchor", "start").text(sc.name);
-            });
-        }
+        savedScenarios.forEach(function(sc) {
+            var g = legendG.append("g").attr("transform", "translate(" + xOff + ",0)");
+            var lineW = isMobile() ? 22 : 18;
+            var lineY = Math.floor(swatch / 2);
+            g.append("line")
+                .attr("x1", 0).attr("y1", lineY)
+                .attr("x2", lineW).attr("y2", lineY)
+                .attr("stroke", sc.color).attr("stroke-width", 2.5)
+                .attr("stroke-dasharray", "5,3");
+            g.append("circle")
+                .attr("cx", lineW).attr("cy", lineY)
+                .attr("r", 3).attr("fill", sc.color);
+            var t = g.append("text")
+                .attr("x", lineW + labelGap + 2)
+                .attr("y", swatch - 3)
+                .attr("fill", "#555")
+                .attr("text-anchor", "start")
+                .text(sc.name);
+            xOff += lineW + labelGap + 2 + t.node().getBBox().width + itemGap;
+        });
 
         var yLabelY = isMobile() ? (height - margin.bottom + 52) : (height + margin.top + 2);
         svg.append("text")
@@ -2075,8 +2134,54 @@
         renderInsights(chartInsights, isInitial);
     }
 
+    // ── Input-label info icons ───────────────────────────
+    // Appends an "ⓘ" button next to each input label and wires it to the same
+    // tooltip infrastructure used by the insight cards.
+    function wireInputInfoButtons() {
+        var inputInfoMap = {
+            p: 'Starting Amount',
+            r: 'Rate (%)',
+            t: 'Years',
+            c: 'Self Contribution',
+            e: 'Employer Contribution',
+            s: 'Yearly Spend'
+        };
+        Object.keys(inputInfoMap).forEach(function(id) {
+            var title = inputInfoMap[id];
+            if (!INFO_DEFINITIONS[title]) return;
+            var label = document.querySelector('label[for="' + id + '"]');
+            if (!label) return;
+
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'ic-info input-info';
+            btn.setAttribute('aria-label', 'What does ' + title + ' mean?');
+            btn.innerHTML =
+                '<svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true" focusable="false">' +
+                '<circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.4"/>' +
+                '<rect x="6.3" y="5.8" width="1.4" height="4.2" rx="0.5" fill="currentColor"/>' +
+                '<circle cx="7" cy="3.9" r="0.85" fill="currentColor"/>' +
+                '</svg>';
+            label.appendChild(document.createTextNode(' '));
+            label.appendChild(btn);
+
+            btn.addEventListener('mouseenter', function() { showInfoTooltip(btn, title); });
+            btn.addEventListener('mouseleave', hideInfoTooltip);
+            btn.addEventListener('focus',      function() { showInfoTooltip(btn, title); });
+            btn.addEventListener('blur',       hideInfoTooltip);
+            btn.addEventListener('click', function(e) {
+                // Stop the click bubbling to the label (which would otherwise focus the input)
+                e.preventDefault();
+                e.stopPropagation();
+                if (activeInfoBtn === btn) hideInfoTooltip();
+                else showInfoTooltip(btn, title);
+            });
+        });
+    }
+
     // ── Init ──────────────────────────────────────────────
     setupMobileInputs();
+    wireInputInfoButtons();
     lineChartCreate();
     lineChartUpdate(true);
     updateSaveBtn();
