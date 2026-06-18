@@ -143,7 +143,8 @@
             font-family: sans-serif;
             font-size: 14px;
             color: #000;
-            height: 100vh;
+            height: 100vh;          /* fallback for browsers without dvh support */
+            height: 100dvh;         /* iOS Safari: matches visible viewport even when URL bar shows */
             overflow: hidden;
         }
 
@@ -151,6 +152,7 @@
         #app {
             display: flex;
             height: 100vh;
+            height: 100dvh;
         }
 
         /* ══════════════════════════════════════════
@@ -207,9 +209,13 @@
             font-family: 'Oswald', sans-serif;
             font-size: clamp(34px, 5.5vh, 54px);
             font-weight: 700;
-            line-height: 1;
+            line-height: 1.15;
             letter-spacing: -1px;
             color: #fff;
+            /* Oswald renders the $ glyph slightly above the cap-line; iOS
+               Safari is stricter about clipping than desktop browsers, so we
+               give the glyphs explicit headroom inside the element. */
+            padding-top: 0.12em;
         }
 
         #heroYears {
@@ -933,7 +939,7 @@
            MOBILE  (≤ 720px)
         ══════════════════════════════════════════ */
         @media (max-width: 720px) {
-            #app { flex-direction: column; height: 100vh; }
+            #app { flex-direction: column; height: 100vh; height: 100dvh; }
 
             /* ── Left panel: compact metric strip ── */
             #leftPanel {
@@ -1179,6 +1185,17 @@
     var height    = 360;
 
     function isMobile() { return window.innerWidth <= 720; }
+
+    // Measure text width in SVG viewBox units without rendering. The SVG legend
+    // uses font-family: sans-serif, so canvas measurement matches getBBox() in
+    // the same coordinate space — letting us pre-compute layout before deciding
+    // how much vertical space the legend needs.
+    function measureTextWidth(text, fontSize) {
+        var c = measureTextWidth._c || (measureTextWidth._c = document.createElement('canvas'));
+        var ctx = c.getContext('2d');
+        ctx.font = fontSize + 'px sans-serif';
+        return ctx.measureText(text).width;
+    }
 
     function updateChartDims() {
         if (isMobile()) {
@@ -1973,6 +1990,101 @@
         svg.append("title").text("Retirement Savings Projection Chart");
     }
 
+    // Computes legend item widths and packed x/y positions with row wrapping.
+    // Returns { items: [...with x,y,...], totalHeight }. Items wrap to a new
+    // row when the current row would overflow the chart's right edge.
+    function computeLegendLayout(scenarios) {
+        var lgFs     = isMobile() ? 18 : 10;
+        var lgShort  = { 'Interest': 'Interest', 'Work Contributions': 'Work', 'Self Contributions': 'Self' };
+        var revKeys  = ['Interest', 'Work Contributions', 'Self Contributions'];
+        var itemGap  = isMobile() ? 26 : 16;
+        var swatch   = isMobile() ? 16 : 13;
+        var labelGap = 4;
+        var legendX  = isMobile() ? 14 : 8;
+        var lineW    = isMobile() ? 22 : 18;
+        var rowGap   = isMobile() ? 8 : 6;
+        var rowHeight = swatch + rowGap;
+        var available = width - margin.right - legendX;
+
+        var items = [];
+
+        revKeys.forEach(function(key) {
+            var label = isMobile() ? lgShort[key] : key;
+            var textW = measureTextWidth(label, lgFs);
+            items.push({
+                type: 'bar', key: key, label: label,
+                itemWidth: swatch + labelGap + textW
+            });
+        });
+
+        scenarios.forEach(function(sc) {
+            var textW = measureTextWidth(sc.name, lgFs);
+            items.push({
+                type: 'scenario', sc: sc,
+                itemWidth: lineW + labelGap + 2 + textW
+            });
+        });
+
+        var xOff = 0, yOff = 0;
+        items.forEach(function(item) {
+            // Wrap to a new row if this item won't fit in the current one
+            // (but never wrap the very first item — that would just orphan it).
+            if (xOff > 0 && xOff + item.itemWidth > available) {
+                xOff = 0;
+                yOff += rowHeight;
+            }
+            item.x = xOff;
+            item.y = yOff;
+            xOff += item.itemWidth + itemGap;
+        });
+
+        return {
+            items: items,
+            totalHeight: yOff + swatch,
+            lgFs: lgFs, swatch: swatch, labelGap: labelGap,
+            legendX: legendX, lineW: lineW
+        };
+    }
+
+    function renderLegend(svg, layout) {
+        var legendG = svg.append("g").attr("class", "chart-legend")
+            .attr("font-family", "sans-serif").attr("font-size", layout.lgFs)
+            .attr("transform", "translate(" + layout.legendX + ",0)");
+
+        layout.items.forEach(function(item) {
+            var g = legendG.append("g")
+                .attr("transform", "translate(" + item.x + "," + item.y + ")");
+
+            if (item.type === 'bar') {
+                g.append("rect")
+                    .attr("x", 0).attr("y", 0)
+                    .attr("width", layout.swatch).attr("height", layout.swatch)
+                    .attr("fill", BAR_COLORS[item.key]);
+                g.append("text")
+                    .attr("x", layout.swatch + layout.labelGap)
+                    .attr("y", layout.swatch - 3)
+                    .attr("text-anchor", "start")
+                    .text(item.label);
+            } else {
+                var lineY = Math.floor(layout.swatch / 2);
+                g.append("line")
+                    .attr("x1", 0).attr("y1", lineY)
+                    .attr("x2", layout.lineW).attr("y2", lineY)
+                    .attr("stroke", item.sc.color).attr("stroke-width", 2.5)
+                    .attr("stroke-dasharray", "5,3");
+                g.append("circle")
+                    .attr("cx", layout.lineW).attr("cy", lineY)
+                    .attr("r", 3).attr("fill", item.sc.color);
+                g.append("text")
+                    .attr("x", layout.lineW + layout.labelGap + 2)
+                    .attr("y", layout.swatch - 3)
+                    .attr("fill", "#555")
+                    .attr("text-anchor", "start")
+                    .text(item.sc.name);
+            }
+        });
+    }
+
     function lineChartUpdate(isInitial) {
         updateChartDims();
         d3.select(SECTION_ID).select("svg").attr("viewBox", "0 0 " + width + " " + height);
@@ -2008,6 +2120,13 @@
             var peak = sc.totalArray[sc.totalArray.length - 1].amount;
             if (peak > yMax) yMax = peak;
         });
+
+        // Pre-compute legend layout (item widths + row positions) before scales
+        // are built. If the legend wraps to more rows than fit in the default
+        // margin.top, we bump margin.top so the chart pushes down to make room.
+        var legendLayout = computeLegendLayout(savedScenarios);
+        var legendNeededTop = legendLayout.totalHeight + 6;
+        if (legendNeededTop > margin.top) margin.top = legendNeededTop;
 
         var x = d3.scaleBand()
             .domain(displayTimes)
@@ -2130,62 +2249,8 @@
         svg.append("g").call(xAxis).attr("class", "x-axis axis");
         svg.append("g").call(yAxis).attr("class", "y-axis axis");
 
-        // Combined legend — bar categories + saved scenarios on a single row.
-        // Items are packed left-to-right using the rendered text width of each
-        // label, so the gap between items stays consistent regardless of label
-        // length. On mobile the 500-unit viewBox renders at ~0.75× — use a
-        // larger SVG font-size to hit legible actual pixel sizes, and shorten
-        // the bar-category labels so the row doesn't blow past the chart edge.
-        var lgFs     = isMobile() ? 18 : 10;
-        var lgShort  = { 'Interest': 'Interest', 'Work Contributions': 'Work', 'Self Contributions': 'Self' };
-        var revKeys  = ['Interest', 'Work Contributions', 'Self Contributions'];
-        var itemGap  = isMobile() ? 26 : 16;
-        var swatch   = isMobile() ? 16 : 13;
-        var labelGap = 4;
-
-        // Anchor the legend close to the SVG left edge instead of the y-axis line
-        // so 4 maxed-out scenario names still fit before the row overflows.
-        var legendX = isMobile() ? 14 : 8;
-        var legendG = svg.append("g").attr("class", "chart-legend")
-            .attr("font-family", "sans-serif").attr("font-size", lgFs)
-            .attr("transform", "translate(" + legendX + ",0)");
-
-        var xOff = 0;
-
-        revKeys.forEach(function(key) {
-            var g = legendG.append("g").attr("transform", "translate(" + xOff + ",0)");
-            g.append("rect")
-                .attr("x", 0).attr("y", 0)
-                .attr("width", swatch).attr("height", swatch)
-                .attr("fill", BAR_COLORS[key]);
-            var t = g.append("text")
-                .attr("x", swatch + labelGap)
-                .attr("y", swatch - 3)
-                .attr("text-anchor", "start")
-                .text(isMobile() ? lgShort[key] : key);
-            xOff += swatch + labelGap + t.node().getBBox().width + itemGap;
-        });
-
-        savedScenarios.forEach(function(sc) {
-            var g = legendG.append("g").attr("transform", "translate(" + xOff + ",0)");
-            var lineW = isMobile() ? 22 : 18;
-            var lineY = Math.floor(swatch / 2);
-            g.append("line")
-                .attr("x1", 0).attr("y1", lineY)
-                .attr("x2", lineW).attr("y2", lineY)
-                .attr("stroke", sc.color).attr("stroke-width", 2.5)
-                .attr("stroke-dasharray", "5,3");
-            g.append("circle")
-                .attr("cx", lineW).attr("cy", lineY)
-                .attr("r", 3).attr("fill", sc.color);
-            var t = g.append("text")
-                .attr("x", lineW + labelGap + 2)
-                .attr("y", swatch - 3)
-                .attr("fill", "#555")
-                .attr("text-anchor", "start")
-                .text(sc.name);
-            xOff += lineW + labelGap + 2 + t.node().getBBox().width + itemGap;
-        });
+        // Render legend using positions pre-computed by computeLegendLayout()
+        renderLegend(svg, legendLayout);
 
         var yLabelY = isMobile() ? (height - margin.bottom + 52) : (height + margin.top + 2);
         svg.append("text")
