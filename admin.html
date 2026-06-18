@@ -45,6 +45,12 @@
 
         a { color: var(--brand-cyan); }
 
+        .sr-only {
+            position: absolute; width: 1px; height: 1px;
+            padding: 0; margin: -1px; overflow: hidden;
+            clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+        }
+
         .shell { max-width: 1200px; margin: 0 auto; }
 
         .eyebrow {
@@ -250,6 +256,7 @@
         .card-title {
             font-family: var(--mono);
             font-size: 11px;
+            font-weight: 500;
             letter-spacing: 0.18em;
             text-transform: uppercase;
             color: var(--muted);
@@ -434,28 +441,28 @@
 
         <div class="grid">
             <div class="card">
-                <p class="card-title">Daily Activity (last 30 days)</p>
+                <h2 class="card-title">Daily Activity (last 30 days)</h2>
                 <div id="sparkContainer"></div>
             </div>
             <div class="card">
-                <p class="card-title">Event Breakdown</p>
+                <h2 class="card-title">Event Breakdown</h2>
                 <div id="eventBreakdown"></div>
             </div>
         </div>
 
         <div class="grid">
             <div class="card">
-                <p class="card-title">Visits by Day × Hour</p>
+                <h2 class="card-title">Visits by Day × Hour</h2>
                 <div id="heatmapContainer"></div>
             </div>
             <div class="card">
-                <p class="card-title">Top Insights Focused</p>
+                <h2 class="card-title">Top Insights Focused</h2>
                 <div id="insightBreakdown"></div>
             </div>
         </div>
 
         <div class="card">
-            <p class="card-title">Recent Events (last 50)</p>
+            <h2 class="card-title">Recent Events (last 50)</h2>
             <div id="recentFeed" class="feed"></div>
         </div>
 
@@ -691,11 +698,23 @@
         var max = 0;
         grid.forEach(function (row) { row.forEach(function (v) { if (v > max) max = v; }); });
 
+        // Screen-reader summary so AT users get the headline without traversing 168 cells
+        var srSummary = document.createElement('p');
+        srSummary.className = 'sr-only';
+        var peak = findPeakSlot(grid);
+        srSummary.textContent = 'Visit heatmap by day of week and hour of day. ' +
+            pageViews.length + ' total page views. ' +
+            (peak ? 'Peak activity is ' + peak + '. ' : '') +
+            'Navigate with your screen reader\'s reading cursor to read each cell.';
+        container.appendChild(srSummary);
+
         var hm = document.createElement('div');
         hm.className = 'heatmap';
-        var dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        var dayLabels      = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        var dayLabelsLong  = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         for (var day = 0; day < 7; day++) {
             var label = document.createElement('span'); label.className = 'hm-label'; label.textContent = dayLabels[day];
+            label.setAttribute('aria-hidden', 'true');
             hm.appendChild(label);
             for (var hour = 0; hour < 24; hour++) {
                 var cell = document.createElement('span');
@@ -704,11 +723,37 @@
                 if (intensity > 0) {
                     cell.style.background = 'rgba(118,87,244,' + (0.15 + intensity * 0.85) + ')';
                 }
-                cell.title = dayLabels[day] + ' ' + hour + ':00 — ' + grid[day][hour] + ' views';
+                // aria-label replaces the `title` attribute, which most screen readers
+                // ignore. tabindex makes the cell focusable so keyboard-only users can
+                // step through cells with Tab.
+                var views = grid[day][hour];
+                cell.setAttribute('role', 'img');
+                cell.setAttribute('aria-label',
+                    dayLabelsLong[day] + ' at ' + formatHour(hour) + ': ' +
+                    views + ' page view' + (views === 1 ? '' : 's'));
                 hm.appendChild(cell);
             }
         }
         container.appendChild(hm);
+    }
+
+    function formatHour(h) {
+        if (h === 0)  return '12 AM';
+        if (h < 12)   return h + ' AM';
+        if (h === 12) return '12 PM';
+        return (h - 12) + ' PM';
+    }
+
+    function findPeakSlot(grid) {
+        var dayLabels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        var bestDay = -1, bestHour = -1, bestVal = 0;
+        for (var d = 0; d < 7; d++) {
+            for (var h = 0; h < 24; h++) {
+                if (grid[d][h] > bestVal) { bestVal = grid[d][h]; bestDay = d; bestHour = h; }
+            }
+        }
+        if (bestVal === 0) return null;
+        return dayLabels[bestDay] + ' at ' + formatHour(bestHour) + ' with ' + bestVal + ' views';
     }
 
     // ── Insight breakdown ────────────────────────────────────────────

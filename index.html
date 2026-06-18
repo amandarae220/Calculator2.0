@@ -472,6 +472,15 @@
             justify-content: center;
             transition: opacity 0.15s;
             border-radius: 50%;
+            position: relative;
+        }
+        /* Invisible hit-area extender — guarantees a 24×24 touch target
+           (WCAG 2.5.8 AA) without enlarging the visible icon or disturbing
+           the surrounding flex layout. */
+        .ic-info::before {
+            content: '';
+            position: absolute;
+            inset: -6px;
         }
         .ic-info:hover, .ic-info:focus-visible { opacity: 1; }
         .ic-info:focus-visible { outline: 2px solid var(--brand-accent); outline-offset: 2px; }
@@ -1715,6 +1724,19 @@
         card.className = 'insightCard' + (ins.type === 'income' ? ' ic-income' : '');
         card.setAttribute('role', 'listitem');
 
+        // Explicit aria-label so AT reads a clean summary instead of walking
+        // every child node (which would otherwise pull in the info button's
+        // label and the SR-only definition span — the definition would then
+        // be announced twice: once here and once via aria-describedby when
+        // the user tabs into the info button itself).
+        var ariaParts = [
+            ins.tag,
+            ins.title,
+            ins.value + (ins.unit || ''),
+            ins.label
+        ].filter(function(p) { return p && /\S/.test(p); });
+        card.setAttribute('aria-label', ariaParts.join('. '));
+
         var tag = document.createElement('div');
         tag.className = 'ic-tag';
         if (ins.year !== undefined) {
@@ -1732,15 +1754,27 @@
             title.appendChild(document.createTextNode(ins.title));
             if (INFO_DEFINITIONS[ins.title]) {
                 var info = document.createElement('button');
+                var descId = 'def-' + ins.title.replace(/\s+/g, '-').toLowerCase();
                 info.type = 'button';
                 info.className = 'ic-info';
                 info.setAttribute('aria-label', 'What does ' + ins.title + ' mean?');
+                info.setAttribute('aria-describedby', descId);
                 info.innerHTML =
                     '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" focusable="false">' +
                     '<circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.4"/>' +
                     '<rect x="6.3" y="5.8" width="1.4" height="4.2" rx="0.5" fill="currentColor"/>' +
                     '<circle cx="7" cy="3.9" r="0.85" fill="currentColor"/>' +
                     '</svg>';
+                title.appendChild(info);
+
+                // SR-only description that the button is described-by. Screen readers
+                // announce this after the button's label on focus.
+                var srDesc = document.createElement('span');
+                srDesc.id = descId;
+                srDesc.className = 'sr-only';
+                srDesc.textContent = INFO_DEFINITIONS[ins.title];
+                title.appendChild(srDesc);
+
                 var insightTitle = ins.title;
                 info.addEventListener('mouseenter', function() { showInfoTooltip(info, insightTitle); });
                 info.addEventListener('mouseleave', hideInfoTooltip);
@@ -1752,7 +1786,6 @@
                     if (activeInfoBtn === info) hideInfoTooltip();
                     else showInfoTooltip(info, insightTitle);
                 });
-                title.appendChild(info);
             }
             card.appendChild(title);
         }
@@ -2150,12 +2183,33 @@
             var title = inputInfoMap[id];
             if (!INFO_DEFINITIONS[title]) return;
             var label = document.querySelector('label[for="' + id + '"]');
-            if (!label) return;
+            var input = document.getElementById(id);
+            if (!label || !input) return;
+
+            // Wrap the existing label text (the first text node before reqMark)
+            // in an explicit span, then point the input at it via aria-labelledby.
+            // This restricts the input's accessible name to JUST the label text,
+            // so the info button's aria-label and the SR-only description don't
+            // get duplicated when the input itself is focused.
+            var labelTextId = 'lbl-' + id;
+            var firstNode = label.firstChild;
+            if (firstNode && firstNode.nodeType === 3 /* TEXT_NODE */) {
+                var textSpan = document.createElement('span');
+                textSpan.id = labelTextId;
+                textSpan.textContent = firstNode.nodeValue.trim();
+                label.replaceChild(textSpan, firstNode);
+                // Preserve the trailing space that originally separated the
+                // label text from the required-marker asterisk.
+                label.insertBefore(document.createTextNode(' '), textSpan.nextSibling);
+                input.setAttribute('aria-labelledby', labelTextId);
+            }
 
             var btn = document.createElement('button');
+            var descId = 'def-input-' + id;
             btn.type = 'button';
             btn.className = 'ic-info input-info';
             btn.setAttribute('aria-label', 'What does ' + title + ' mean?');
+            btn.setAttribute('aria-describedby', descId);
             btn.innerHTML =
                 '<svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true" focusable="false">' +
                 '<circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.4"/>' +
@@ -2164,6 +2218,13 @@
                 '</svg>';
             label.appendChild(document.createTextNode(' '));
             label.appendChild(btn);
+
+            // SR-only description (paired with aria-describedby above)
+            var srDesc = document.createElement('span');
+            srDesc.id = descId;
+            srDesc.className = 'sr-only';
+            srDesc.textContent = INFO_DEFINITIONS[title];
+            label.appendChild(srDesc);
 
             btn.addEventListener('mouseenter', function() { showInfoTooltip(btn, title); });
             btn.addEventListener('mouseleave', hideInfoTooltip);
