@@ -143,7 +143,8 @@
             font-family: sans-serif;
             font-size: 14px;
             color: #000;
-            height: 100vh;
+            height: 100vh;          /* fallback for browsers without dvh support */
+            height: 100dvh;         /* iOS Safari: matches visible viewport even when URL bar shows */
             overflow: hidden;
         }
 
@@ -151,6 +152,7 @@
         #app {
             display: flex;
             height: 100vh;
+            height: 100dvh;
         }
 
         /* ══════════════════════════════════════════
@@ -207,9 +209,13 @@
             font-family: 'Oswald', sans-serif;
             font-size: clamp(34px, 5.5vh, 54px);
             font-weight: 700;
-            line-height: 1.15; /* Oswald's cap-height extends above the line-box at line-height:1, clipping the top of glyphs */
+            line-height: 1.15;
             letter-spacing: -1px;
             color: #fff;
+            /* Oswald renders the $ glyph slightly above the cap-line; iOS
+               Safari is stricter about clipping than desktop browsers, so we
+               give the glyphs explicit headroom inside the element. */
+            padding-top: 0.12em;
         }
 
         #heroYears {
@@ -933,7 +939,7 @@
            MOBILE  (≤ 720px)
         ══════════════════════════════════════════ */
         @media (max-width: 720px) {
-            #app { flex-direction: column; height: 100vh; }
+            #app { flex-direction: column; height: 100vh; height: 100dvh; }
 
             /* ── Left panel: compact metric strip ── */
             #leftPanel {
