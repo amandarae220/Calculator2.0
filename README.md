@@ -21,7 +21,7 @@ I built this to answer the question I kept asking myself: at what point does my 
 
 ## Overview
 
-A compound interest visualizer that projects savings growth year by year and surfaces the key inflection points automatically. It breaks your balance down into principal, self contributions, employer contributions, and earned interest, then flags five milestones: when annual interest first beats your own contribution (Lift Off), when cumulative interest overtakes everything you've put in (Tipping Point), when you can stop contributing and still hit your FI number (Coast FI), and two retirement drawdown scenarios. Built as a zero-dependency single-file app so it stays easy to host and share.
+A compound interest visualizer that projects savings growth year by year and surfaces the key inflection points automatically. It breaks your balance down into principal, self contributions, employer contributions, and earned interest, then flags six milestones: Lift Off (annual interest overtakes your contributions), Tipping Point (compounding takes over your balance), Lean FI (retire on a trimmed budget), Coast FI (stop contributing and coast to full FI), plus Skim the Top and Die with Zero as retirement drawdown scenarios. Anonymous usage analytics feed an admin dashboard at [`/admin`](admin.html) to guide improvements. Built as a mostly zero-dependency single-file app so it stays easy to host and share.
 
 > [!NOTE]
 > The full architecture rationale is documented in [docs/decisions/2026-06-14-single-file-no-build-architecture.md](docs/decisions/2026-06-14-single-file-no-build-architecture.md).
@@ -34,6 +34,7 @@ A compound interest visualizer that projects savings growth year by year and sur
 |------------|----------------|
 | D3.js v7 | Custom stacked bar chart with animation and grouped axes. Would've been painful to build from scratch with canvas or native SVG. |
 | Vanilla JS/CSS | No build step means instant GitHub Pages deployment with no toolchain to maintain. |
+| Supabase | Analytics backend + auth for the admin dashboard. Free tier, RLS-protected, no server to run. |
 | GitHub Pages + Actions | Serves two versions (v1 at `/v1/`, current at `/`) from the same repo without a separate hosting account. |
 
 ---
@@ -53,10 +54,16 @@ The app runs at `http://localhost:3000` by default.
 
 ```
 .
-├── index.html                           # the whole app
-├── package.json                         # name + start script
+├── index.html                           # the calculator app
+├── admin.html                           # analytics dashboard (Supabase-auth gated)
+├── privacy.html                         # privacy policy + opt-out
+├── assets/
+│   ├── analytics.js                     # consent-gated event tracker
+│   └── config.js                        # public Supabase URL + anon key
+├── docs/
+│   ├── calculator_events_schema.sql     # analytics table + RLS policies
+│   └── decisions/                       # ADRs
 ├── robots.txt + sitemap.xml             # SEO
-├── docs/decisions/                      # ADRs
 └── .github/
     ├── workflows/deploy.yml             # builds gh-pages from main + feature branches
     └── pull_request_template.md
@@ -76,7 +83,8 @@ Deployed via GitHub Pages. A GitHub Actions workflow builds the `gh-pages` branc
 
 ## Latest Updates
 
-- **Jun 2026** — SEO pass: structured data, social cards, resource hints, semantic heading hierarchy
-- **Jun 2026** — Full WCAG 2.1 AA audit: focus trapping, aria-live regions, reduced-motion support, contrast fixes
-- **Jun 2026** — Added five key financial insight cards with animated chart markers and cross-highlight on hover
-- **Jun 2026** — Added scenario saving, mobile bottom-sheet layout, and input validation
+- **Jul 2026** — Privacy policy, first-visit consent banner, and analytics opt-out — nothing tracks until you accept
+- **Jun 2026** — Analytics dashboard at [`/admin`](admin.html): daily activity sparkline, event breakdown, day×hour heatmap, top insights focused
+- **Jun 2026** — Added Lean FI insight and info tooltips (with screen-reader descriptions) on every FI term and input
+- **Jun 2026** — Full WCAG 2.1 AA + Section 508 audit against WAVE and VoiceOver: aria-labelledby fixes, contrast passes, 24×24 touch targets, no-js class replacing `<noscript>`
+- **Jun 2026** — SEO pass: structured data, Open Graph + Twitter cards, resource hints, semantic heading hierarchy
