@@ -478,6 +478,16 @@
         auth: { persistSession: true, autoRefreshToken: true },
     });
 
+    // Event types the calculator emits. Values from the database that aren't
+    // in this list are class-name-coerced to 'unknown' before use.
+    var KNOWN_EVENT_TYPES = {
+        page_view: 1, page_exit: 1, scenario_saved: 1, insight_focused: 1,
+        mobile_sheet_opened: 1, calculation: 1, coast_fi_used: 1
+    };
+    function safeEventTypeClass(t) {
+        return KNOWN_EVENT_TYPES[t] ? t : 'unknown';
+    }
+
     // ── DOM refs ─────────────────────────────────────────────────────
     var $ = function (id) { return document.getElementById(id); };
     var authGate   = $('authGate');
@@ -546,10 +556,26 @@
     function populateDeviceAndBrowserFilters() {
         var devices  = unique(allEvents.map(function (e) { return e.device; }).filter(Boolean));
         var browsers = unique(allEvents.map(function (e) { return e.browser; }).filter(Boolean));
-        var deviceSel  = $('deviceFilter');
-        var browserSel = $('browserFilter');
-        deviceSel.innerHTML  = '<option value="">All devices</option>'  + devices.map(function (d)  { return '<option>' + d + '</option>'; }).join('');
-        browserSel.innerHTML = '<option value="">All browsers</option>' + browsers.map(function (b) { return '<option>' + b + '</option>'; }).join('');
+        populateSelect($('deviceFilter'),  'All devices',  devices);
+        populateSelect($('browserFilter'), 'All browsers', browsers);
+    }
+
+    // Safe DOM construction — the previous innerHTML+string-concat version
+    // was an XSS sink: attacker POSTs an event with device="<script>..."
+    // directly to the Supabase REST endpoint, then the admin session
+    // renders the script when the dropdown is built.
+    function populateSelect(sel, allLabel, values) {
+        sel.textContent = '';
+        var allOpt = document.createElement('option');
+        allOpt.value = '';
+        allOpt.textContent = allLabel;
+        sel.appendChild(allOpt);
+        values.forEach(function (v) {
+            var opt = document.createElement('option');
+            opt.value = v;
+            opt.textContent = v;
+            sel.appendChild(opt);
+        });
     }
 
     function unique(arr) { return Array.from(new Set(arr)).sort(); }
@@ -793,7 +819,12 @@
             var time = document.createElement('span'); time.className = 'feed-time';
             time.textContent = t ? t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
             var type = document.createElement('span');
-            type.className = 'feed-type feed-type-' + e.event_type;
+            // Whitelist the known event types before using event_type as part
+            // of a class name. An attacker can POST arbitrary event_type
+            // values; className is a property (not HTML) so this isn't a
+            // classic XSS vector, but a malicious event_type with spaces
+            // could inject arbitrary CSS classes into the admin UI.
+            type.className = 'feed-type feed-type-' + safeEventTypeClass(e.event_type);
             type.textContent = e.event_type;
             var meta = document.createElement('span'); meta.className = 'feed-meta';
             var bits = [];
